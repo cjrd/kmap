@@ -1,5 +1,5 @@
 /*global define */
-define(["jquery", "underscore", "backbone", "lib/kmap/js/collections/edge-collection", "lib/kmap/js/collections/node-collection", "lib/kmap/js/models/node-model", "lib/kmap/js/models/edge-model"], function($, _, Backbone, BaseEdgeCollection, BaseNodeCollection){
+define(["jquery", "underscore", "backbone", "../collections/edge-collection", "../collections/node-collection", "../models/node-model", "../models/edge-model"], function($, _, Backbone, BaseEdgeCollection, BaseNodeCollection){
   var pvt = {};
 
   pvt.alwaysTrue = function(){return true;};
