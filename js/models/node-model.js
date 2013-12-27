@@ -56,10 +56,10 @@ define(["backbone", "underscore", "../collections/edge-collection"], function(Ba
           }
 
           thisModel.get("dependencies").each(function(dep){
-            var depId = dep.get("from_tag");
+            var depNode = dep.get("source"),
+                depId = depNode.id;
             if (!ulOnly || !aux.conceptIsLearned(depId)){
-              var depNode = coll.get(depId),
-                  dAncests = depNode.getAncestors(ulOnly);
+              var dAncests = depNode.getAncestors(ulOnly);
               for (var dAn in dAncests){
                 if(dAncests.hasOwnProperty(dAn)){
                   ancests[dAn] = 1;
@@ -68,7 +68,7 @@ define(["backbone", "underscore", "../collections/edge-collection"], function(Ba
             }
           });
           thisModel.get("dependencies").each(function(dep){
-            ancests[dep.get("from_tag")] = 1;
+            ancests[dep.get("source").id] = 1;
           });
           if(!ulOnly){
             thisModel.ancestors = ancests;
@@ -76,6 +76,7 @@ define(["backbone", "underscore", "../collections/edge-collection"], function(Ba
         }
         return ancests || thisModel.ancestors;
       },
+
       /**
        * Returns the unique (not transitive) dependencies of the node
        * TODO refactor this view to

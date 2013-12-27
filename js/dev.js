@@ -8,10 +8,13 @@ require(["main"], function(KMap){
       graphListView = new KMap.GraphListView({model: graphModel});
 
   // fetch some graph data
-  $.getJSON("/data/tiny_demo_graph.json",
+  $.getJSON("/data/demo_kmap.json",
     function (data) {
       // add the data to the graph model
       graphModel.addJsonNodesToGraph(data);
+
+      // set the graph placement (don't use if "x" and "y" are specified in the data)
+      graphView.optimizeGraphPlacement(false, false);
 
       // render the views
       graphView.render();

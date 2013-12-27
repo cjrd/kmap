@@ -126,6 +126,12 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     thisView.gPaths = d3SvgG.append("g").selectAll("g");
     thisView.gCircles = d3SvgG.append("g").selectAll("g");
 
+    // listen for svg events
+    // listen for mouse events on svg
+    thisView.d3Svg.on("mouseup", function(){
+      thisView.svgMouseUp.apply(thisView, arguments);
+    });
+
     // apply zoom (can be overridden in subclass)
     thisView.setupZoomTransListeners.call(thisView);
   };
@@ -196,6 +202,20 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     return pvt.getIdOfNodeType.call(this, node) + pvt.consts.summaryWrapDivSuffix;
   };
 
+  /**
+   * Get summary box placement (top left) given node placement
+   */
+  pvt.getSummaryBoxPlacement = function(nodeRect, placeLeft){
+    var consts = pvt.consts,
+        leftMultSign = placeLeft ? -1: 1,
+        shiftDiff = (1 + leftMultSign*Math.SQRT1_2)*nodeRect.width/2 + leftMultSign*consts.summaryArrowWidth;
+    if (placeLeft){shiftDiff -= consts.summaryWidth;}
+    return {
+      top:  (nodeRect.top + (1-Math.SQRT1_2)*nodeRect.height/2 - consts.summaryArrowTop) + "px",
+      left:  (nodeRect.left + shiftDiff) + "px"
+    };
+  };
+
   pvt.addECIcon = function(d, d3el, isDeps){
     var thisView = this,
         consts = pvt.consts,
@@ -263,14 +283,100 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     }
   };
 
+  /**
+   * Hide long paths and show wisps
+   */
+  pvt.handleLongPaths = function (d, d3this) {
+    var consts = pvt.consts,
+        stPathD = pvt.getPathWispD(d3this.select("path").node(), true),
+        endPathD = pvt.getPathWispD(d3this.select("path").node(), false),
+        wispsG,
+        longPaths;
+
+    // hide long paths
+    longPaths = d3this.selectAll("path");
+    longPaths.on("mouseout", function(d){
+      d3this.classed("link-wrapper-hover", false);
+    });
+    if (!d3this.classed(consts.linkWrapHoverClass)){
+      longPaths.attr("opacity", 1)
+        .transition()
+        .attr("opacity", 0)
+        .each("end", function(){
+          longPaths.classed(consts.longEdgeClass, true)
+            .attr("opacity", 1);
+        });
+    } else {
+      longPaths.classed(consts.longEdgeClass, true);
+    }
+
+    // TODO remove hardcoding to consts
+    wispsG = d3this.insert("g", ":first-child")
+      .classed(consts.wispGClass, true);
+    wispsG.append("path")
+      .attr("id", consts.startWispPrefix + d3this.attr("id"))
+      .attr("d", stPathD)
+      .attr("stroke-dasharray", consts.wispDashArray)
+      .classed(consts.startWispClass, true);
+    wispsG.append("path")
+      .attr("d", stPathD)
+      .classed("short-link-wrapper", true);
+
+    wispsG.append("path")
+      .attr("id", consts.endWispPrefix + d3this.attr("id"))
+      .attr("d", endPathD)
+      .attr("stroke-dasharray", consts.wispDashArray)
+      .style('marker-end','url(#end-arrow)')
+      .classed(consts.endWispClass, true);
+
+    wispsG.append("path")
+      .attr("d", endPathD)
+      .classed(consts.wispWrapperClass, true);
+
+    wispsG.selectAll("path")
+      .on("mouseover", function(){
+        d3this.classed(consts.linkWrapHoverClass, true);
+      });
+  };
+
+  /**
+   * return <function> isEdgeVisible function with correct "this"
+   * and transitivity not taken into account
+   */
+  pvt.getEdgeVisibleNoTransFun = function(){
+    var thisView = this;
+    return function(e){
+      return thisView.isEdgeVisible.call(thisView,  e, false);
+    };
+  };
+
+  /**
+   * Returns the path of the starting wisp
+   */
+  pvt.getPathWispD = function (svgPath, isStart) {
+    var consts = pvt.consts,
+        distances = [],
+        dt = consts.wispLen/consts.numWispPts,
+        endDist = isStart ? consts.wispLen : svgPath.getTotalLength(),
+        i = isStart ? 0 :  endDist - consts.wispLen + consts.nodeRadius; // TODO subtract node radius
+
+    distances.push(i);
+    while ((i += dt) < endDist) distances.push(i);
+    var points = distances.map(function(dist){
+      return svgPath.getPointAtLength(dist);
+    });
+    if (!isStart) points.push(svgPath.getPointAtLength(10000000)); // FIXME hack for firefox support (how to get the last point?)
+    return "M" + points.map(function(p){ return p.x + "," + p.y;}).join("L");
+
+  };
+
   pvt.getEdgePath = function(d){
-    var pathPts = [].concat(d.get("middlePts"));
+    var pathPts = d.get("middlePts") ? [].concat(d.get("middlePts")) : [];
+
     // TODO only compute if node position changed
     var srcPt = d.get("source"),
         targetPt = d.get("target"),
-        //        secPt = pathPts.length ? pathPts[0] : targetPt,
         penUltPt = pathPts.length ? pathPts[pathPts.length - 1] : srcPt;
-    //    var srcEndPt = pvt.computeEndPt(srcPt, secPt).source,
     var targetEndPt = pvt.computeEndPt(penUltPt, targetPt).target;
     pathPts.unshift(srcPt);
     pathPts.push(targetEndPt);
@@ -547,7 +653,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     /**
      * called for each edge after it has been rendered (all animations have been applied)
      */
-    postRenderEdge: function () {},
+    postRenderEdge: function (d, d3El) {
+      var consts = pvt.consts;
+      d3El.select("." + consts.wispGClass).remove();
+      d3El.select("." + consts.longEdgeClass).classed(consts.longEdgeClass, false);
+      var thisView = this;
+      if (thisView.doClipEdge(d) && !thisView.scopeNode) {
+        pvt.handleLongPaths(d, d3El);
+      }
+
+    },
 
 
     /**
@@ -558,7 +673,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     /**
      * Optimize graph placement using dagre
      *
-     * @param nodeWidth <number>: the width in px of each node
+     * @param doRender <boolean>: render after optimization
      * @param <boolean> minSSDist: whether to miminize the squared distance of the
      * nodes moved in the graph by adding the mean distance moved in each direction -- defaults to true
      * @param <id> noMoveNodeId: node id of node that should not move during optimization
@@ -639,13 +754,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     },
 
     /**
-     * include the given edge in the optimization placement?
-     */
-    includeEdgeInOpt: function (edge) {
-      return true;
-    },
-
-    /**
      * Centers the given node
      * Note: places root/leaves at 1/3 dist from respective edge
      */
@@ -714,6 +822,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
     /**
      * insert svg line breaks: taken from
+     * TODO move to utils?
      * http://stackoverflow.com/questions/13241475/how-do-i-include-newlines-in-labels-in-d3-charts
      * TODO this function has become far too large & needs to be refactored
      */
@@ -997,6 +1106,18 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     // },
 
     /**
+     * Handle mouseup event on svg
+     */
+    svgMouseUp: function () {
+      var thisView = this;
+      thisView.preSvgMouseUp();
+      // reset the states here
+      thisView.state.justDragged = false;
+      thisView.state.iconClicked = false;
+      thisView.postSvgMouseUp();
+    },
+
+    /**
      * Return the g element of the path from the given model
      *
      * @param eModel: the edge model
@@ -1070,15 +1191,87 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      * @return {boolean} true if the node circle is visible
      */
     isNodeVisible: function(node){
-      return true;
+      return !node.get("isContracted");
     },
 
     /**
-     * @return {boolean} true if the edge path is visible
+     * Return true if the edge should be visible
+     * @param edge
+     * @param <boolean> useTrans: take into account transitivity? {default: true}
+     * @return <boolean> true if the edge path is visible
      */
-    isEdgeVisible: function(edge){
-      return true;
+    isEdgeVisible: function(edge, useVisTrans){
+      var thisView = this;
+      useVisTrans = useVisTrans === undefined ? true : useVisTrans;
+      return (!useVisTrans || !thisView.isEdgeVisiblyTransitive(edge))
+        && !edge.get("isContracted")
+        && (thisView.isNodeVisible(edge.get("source")) && thisView.isNodeVisible(edge.get("target")));
     },
+
+    /**
+     * Determines if the edge should be clipped
+     *
+     */
+    doClipEdge: function(edge) {
+      var thisView = this;
+      return !(thisView.isEdgeShortestOutlink(edge) || thisView.isEdgeLengthBelowThresh(edge));
+    },
+
+    /**
+     * include the given edge in the optimization placement?
+     */
+    includeEdgeInOpt: function (edge) {
+      return !edge.get("isContracted") && !edge.get("isTransitive");
+    },
+
+    /**
+     * Determines if an edge is transitive given that other edges may be hidden
+     */
+    isEdgeVisiblyTransitive: function (edge) {
+      var thisView = this;
+      return edge.get("isTransitive")
+        && thisView.model.checkIfTransitive(edge, pvt.getEdgeVisibleNoTransFun.call(thisView));
+    },
+
+    /**
+     * Detect if the given edge is shorter than the threshold specified in pvt.consts
+     * TODO use getTotalLength on svg path
+     */
+    isEdgeLengthBelowThresh: function (edge) {
+      var src = edge.get("source"),
+          tar = edge.get("target");
+      return Math.sqrt(Math.pow(src.get("x") - tar.get("x"), 2)  + Math.pow(src.get("y") - tar.get("y"), 2)) <= pvt.consts.edgeLenThresh;
+    },
+
+    /**
+     * Detect if the given edge is the shortest outlink from the source node
+     */
+    isEdgeShortestOutlink: function (edge) {
+      var thisView = this,
+          source = edge.get("source"),
+          srcX = source.get("x"),
+          srcY = source.get("y"),
+          curMinSqDist = Number.MAX_VALUE,
+          distSq,
+          tar,
+          minId;
+      source.get("outlinks").each(function (ol) {
+        tar = ol.get("target"),
+        distSq = Math.pow(tar.get("x") - srcX, 2) + Math.pow(tar.get("y") - srcY, 2);
+        if (distSq <= curMinSqDist && !thisView.isEdgeVisiblyTransitive(ol)){
+          minId = tar.id;
+          curMinSqDist = distSq;
+        }
+      });
+      return minId === edge.get("target").id;
+    },
+
+    handleShowAllClick: function (evt) {
+      var thisView = this;
+      // FIXME
+      //Utils.simulate(document.getElementById(thisView.getCircleGId(thisView.focusNode)), "mouseup");
+    },
+
 
     /**
      * Set the scope node
@@ -1148,7 +1341,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     preCircleMouseOver: function () {},
     postCircleMouseOver: function () {},
     preCircleMouseUp: function () {},
-    postCircleMouseUp: function () {}
+    postCircleMouseUp: function () {},
+    postSvgMouseUp: function () {},
+    preSvgMouseUp: function () {}
 
   });
 

@@ -49,7 +49,13 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
       jsonNodeArr.forEach(function(node) {
         node.dependencies.forEach(function(dep) {
-          tmpEdges.push({source: dep.source, target: node.id, reason: dep.reason, middlePts: dep.middlePts, id: dep.id, isContracted: dep.isContracted});
+          var tEdge = {source: dep.source, target: node.id, isContracted: dep.isContracted};
+          if (dep.reason) tEdge.reason = dep.reason;
+          if (dep.middlePts) tEdge.middlePts = dep.middlePts;
+          if (dep.id) tEdge.id = dep.id;
+          if (dep.id) tEdge.id = dep.id;
+
+          tmpEdges.push(tEdge);
         });
         node.dependencies = undefined;
         thisGraph.addNode(node);
