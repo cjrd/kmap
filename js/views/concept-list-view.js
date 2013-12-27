@@ -1,142 +1,22 @@
+
 /*global define*/
-
-define(["backbone", "underscore", "jquery", "utils/utils"], function (Backbone, _, $, Utils) {
-
-  /**
-   * Display the concepts as an item in the node list
-   */
-  var NodeListItemView = (function(){
-    // define private variables and methods
-    var pvt = {};
-
-    pvt.viewConsts = {
-      templateId: "node-title-view-template", // name of view template (warning: hardcoded in html)
-      implicitLearnedClass: "implicit-learned-concept-title",
-      viewClass: "learn-title-display",
-      viewIdPrefix: "node-title-view-", // must also change in parent
-      learnedCheckClass: "lcheck",
-      learnedClass: "learned-concept-title",
-      starredClass: "starred-concept-title"
-    };
-
-    // return public object for node list item view
-    return Backbone.View.extend({
-      template: _.template(document.getElementById( pvt.viewConsts.templateId).innerHTML),
-
-      id: function(){ return pvt.viewConsts.viewIdPrefix +  this.model.id;},
-
-      tagName: "li",
-
-      events: {
-        "click .learn-view-check": function(evt){
-          evt.stopPropagation();
-          this.toggleConceptState(evt, "learn");
-        },
-        "click .learn-view-star": function(evt){
-          evt.stopPropagation();
-          this.toggleConceptState(evt, "star");
-        },
-        "click": function(){
-          this.appRouter.changeUrlParams({focus: this.model.id});
-        }
-      },
-
-      className: function(){
-        var viewConsts = pvt.viewConsts,
-            thisView = this,
-            thisModel = thisView.model,
-            aux = window.agfkGlobals.auxModel,
-            id = thisModel.id;
-        return pvt.viewConsts.viewClass
-          + (aux.conceptIsStarred(id) ? " " + viewConsts.starredClass : "")
-          + (aux.conceptIsLearned(id) ? " " + viewConsts.learnedClass : "")
-          + (thisModel.getImplicitLearnStatus() ? " " + viewConsts.implicitLearnedClass : "");
-      },
-
-      /**
-       * Initialize the view with appropriate listeners
-       */
-      initialize: function(inp){
-        var thisView = this,
-            viewConsts = pvt.viewConsts,
-            learnedClass = viewConsts.learnedClass,
-            implicitLearnedClass = viewConsts.implicitLearnedClass,
-            starredClass = viewConsts.starredClass,
-            nodeTag = thisView.model.id,
-            aux = window.agfkGlobals.auxModel,
-            gConsts = aux.getConsts();
-        // set the app router
-        thisView.appRouter = inp.appRouter;
-
-        thisView.listenTo(aux, gConsts.learnedTrigger + nodeTag, function(nodeId, nodeSid, status){
-          thisView.changeTitleClass(learnedClass, status);
-        });
-        thisView.listenTo(aux, gConsts.starredTrigger + nodeTag, function(nodeId, nodeSid, status){
-          thisView.changeTitleClass(starredClass, status);
-        });
-        thisView.listenTo(thisView.model, "change:implicitLearnStatus", function(nodeId, nodeSid, status){
-          thisView.changeTitleClass(implicitLearnedClass, status);
-        });
-      },
-
-      /**
-       * Render the learning view given the supplied model
-       */
-      render: function(){
-        var thisView = this;
-        var thisModel = thisView.model;
-        var h = _.clone(thisModel.toJSON());
-        h.title = thisModel.getLearnViewTitle();
-        thisView.$el.html(thisView.template(h));
-        return thisView;
-      },
-
-      /**
-       * Change the title display properties given by prop
-       */
-      changeTitleClass: function(classVal, status){
-        if (status){
-          this.$el.addClass(classVal);
-        }
-        else{
-          this.$el.removeClass(classVal);
-        }
-      },
-
-      /**
-       * Toggle speficied state of given concept
-       */
-      toggleConceptState: function(evt, state){
-        evt.stopPropagation();
-        var aux = window.agfkGlobals.auxModel,
-            nodeTag = this.model.id;
-        state === "learn" ? aux.toggleLearnedStatus(nodeTag) : aux.toggleStarredStatus(nodeTag);
-      }
-    });
-  })();
+define(["backbone", "underscore", "jquery", "../views/concept-list-item"], function (Backbone, _, $, ConceptListItem) {
 
   return (function(){
-
-  // private class variables and methods
+    // private class variables and methods
     var pvt = {};
-    pvt.prevButtonEl = null;
 
-    pvt.consts = {
-      templateId : "concept-list-template",
+  pvt.consts = {
       viewId: "concept-list",
       clickedItmClass: "clicked-title",
       titleIdPrefix: "node-title-view-",
       visibleClass: "show-clist",
       hiddenClass: "hide-clist",
       viewId: "concept-list-panel",
-      activeClass: "active",
-      elNameAppend: "-button",
-      elNavButtonClass: "el-nav-button"
+      activeClass: "active"
     };
 
     return Backbone.View.extend({
-
-      template: _.template(document.getElementById(pvt.consts.templateId).innerHTML),
 
       id: pvt.consts.viewId,
 
@@ -144,80 +24,97 @@ define(["backbone", "underscore", "jquery", "utils/utils"], function (Backbone, 
         "keyup #concept-list-search-input": "keyUpCLSearchInput",
         "click #concept-list-show-button": "clickListShowButton",
         "click #concept-list-hide-button": "clickListHideButton",
-        "click #cancel-search-input": "clickCancelSearchInput",
-        "click .el-nav-button": "handleELButtonClick"
+        "click #cancel-search-input": "clickCancelSearchInput"
       },
 
+      /** override in subclass */
+      preinitialize: function () {},
+
+      /**
+       * initialize this view
+       * NOTE: this function should typically not be overridden -- use pre/post initialize to customize
+       */
       initialize: function (inp) {
-        var thisView = this,
-            gConsts = window.agfkGlobals.auxModel.getConsts();
+        var thisView = this;
+        thisView.preinitialize(inp);
         thisView.idToTitleView = {};
-        thisView.listenTo(window.agfkGlobals.auxModel,
-                          gConsts.learnedTrigger, thisView.updateTimeEstimate);
-        // NOWFIX is this firing?
-        thisView.listenTo(thisView.model, "sync", thisView.updateTimeEstimate);
-        if (inp !== undefined) {
-          thisView.appRouter = inp.appRouter;
-        }
+        thisView.postinitialize(inp);
       },
 
+      /** override in subclass */
+      postinitialize: function (inp) {
+        var thisView = this;
+        thisView.ListItem = ConceptListItem;
+      },
+
+      /** override in subclass */
+      prerender: function (inp) {
+        var thisView = this;
+        thisView.$el.html("");
+      },
+
+      /**
+       * Render the concept list view
+       * NOTE: this function should typically not be overridden -- use pre/post render to customize
+       */
       render: function () {
         var thisView = this,
-            appRouter = thisView.appRouter,
             nodes = thisView.model.getNodes(),
+            appRouter = thisView.appRouter, // TODO disentangle metacademy object from graph
             curNode,
             nliview;
-        thisView.isRendered = false;
+        thisView.prerender();
 
-        thisView.$el.html(thisView.template());
+        thisView.isRendered = false;
 
         var $list = thisView.$el.find("ol"),
             nodeOrdering = thisView.model.getTopoSort();
+
         // add the list elements with the correct properties
         var i = -1, len = nodeOrdering.length;
         for(; ++i < len;){
           curNode = nodes.get(nodeOrdering[i]);
-          nliview = new NodeListItemView({model: curNode, appRouter: appRouter});
+          nliview = new thisView.ListItem({model: curNode, appRouter: appRouter});
           thisView.idToTitleView[curNode.id] = nliview;
           $list.append(nliview.render().el);
         }
-        thisView.$el.find("#concept-list").append($list); // TODO move hardcoding
+        thisView.$list = $list;
+
+        thisView.postrender();
 
         thisView.isRendered = true;
-
         return thisView;
       },
 
+      /** override in subclass */
+      postrender: function () {
+      },
+
+      /**
+       * Return a shallow copy of the private consts
+       */
+      getConstsClone: function () {
+        return _.clone(pvt.consts);
+      },
+
+      /**
+       * handle click event on the "show sidebar" element
+       */
       clickListShowButton: function (evt) {
         this.$el.parent().addClass(pvt.consts.visibleClass);
         this.$el.parent().removeClass(pvt.consts.hiddenClass);
       },
 
+      /**
+       * handle click event on the "hide sidebar" element
+       */
       clickListHideButton: function (evt) {
         this.$el.parent().removeClass(pvt.consts.visibleClass);
         this.$el.parent().addClass(pvt.consts.hiddenClass);
       },
 
-      updateTimeEstimate: function(){
-        var thisView = this,
-            nodes = thisView.model.getNodes(),
-            timeEstimate,
-            timeStr;
-        if (nodes.getTimeEstimate){
-          timeEstimate = nodes.getTimeEstimate();
-          if (timeEstimate) {
-            timeStr = "Completion Time: " + Utils.formatTimeEstimate(timeEstimate);
-          } else {
-            timeStr = "All done!";
-          }
-        } else {
-          timeStr = "---";
-        }
-        thisView.$el.find(".time-estimate").html(timeStr); // TODO move hardcoding
-      },
-
       /**
-       *
+       * Change the selected title element
        */
       changeSelectedTitle: function (selId) {
         var thisView = this,
@@ -226,10 +123,16 @@ define(["backbone", "underscore", "jquery", "utils/utils"], function (Backbone, 
         $("#" + thisView.getDomIdFromId(selId)).addClass(clickedItmClass);
       },
 
+      /**
+       * get the title dom element corresponding to the input id
+       */
       getDomIdFromId: function (id) {
         return pvt.consts.titleIdPrefix + id;
       },
 
+      /**
+       * Handle keyup event on search input
+       */
       keyUpCLSearchInput: function () {
         var thisView = this,
             $inpEl = $("#concept-list-search-input"),
@@ -251,48 +154,12 @@ define(["backbone", "underscore", "jquery", "utils/utils"], function (Backbone, 
 
       },
 
+      /**
+       * handle click event on search input
+       */
       clickCancelSearchInput: function () {
-          $("#concept-list-search-input").val("");
-          this.keyUpCLSearchInput();
-      },
-
-      /**
-       * Handle click event by passing relevant event info to changeActiveELButton
-       */
-      handleELButtonClick: function(evt){
-        var thisView = this;
-        var buttonEl = evt.currentTarget;
-        thisView.changeActiveELButtonFromDomEl(buttonEl);
-        //thisView.appRouter.setELTransition(true);
-        thisView.appRouter.changeUrlParams({mode: buttonEl.id.split("-")[0]});
-      },
-
-      /**
-       * Change the active button to the input name: "explore" or "learn"
-       */
-      changeActiveELButtonFromName: function(name){
-        var $domEl = $("#" + name + pvt.consts.elNameAppend);
-        if ($domEl.get(0)){
-          this.changeActiveELButtonFromDomEl($domEl.get(0));
-        }
-      },
-
-      /**
-       * Change the active button to the input dom element (must be one of the EL buttons)
-       */
-      changeActiveELButtonFromDomEl: function(buttonEl){
-        if (pvt.prevButtonEl === null || buttonEl.id !== pvt.prevButtonEl.id){
-          var activeClass = pvt.consts.activeClass,
-              $prevButton = $(pvt.prevButtonEl);
-
-          $prevButton.toggleClass(activeClass);
-          $prevButton.prop("disabled", false);
-
-          var $buttonEl = $(buttonEl);
-          $buttonEl.toggleClass(activeClass);
-          $buttonEl.prop("disabled", true);
-          pvt.prevButtonEl = buttonEl;
-        }
+        $("#concept-list-search-input").val("");
+        this.keyUpCLSearchInput();
       },
 
       /**
