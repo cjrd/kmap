@@ -6,14 +6,15 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
     // private class variables and methods
     var pvt = {};
 
-  pvt.consts = {
-      viewId: "concept-list",
+    pvt.consts = {
       clickedItmClass: "clicked-title",
       titleIdPrefix: "node-title-view-",
       visibleClass: "show-clist",
       hiddenClass: "hide-clist",
       viewId: "concept-list-panel",
-      activeClass: "active"
+      activeClass: "active",
+      olId: "concept-list",
+      wrapperId: "concept-list-wrapper"
     };
 
     return Backbone.View.extend({
@@ -61,14 +62,18 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
         var thisView = this,
             nodes = thisView.model.getNodes(),
             appRouter = thisView.appRouter, // TODO disentangle metacademy object from graph
+            consts = pvt.consts,
+            olId = consts.olId,
             curNode,
             nliview;
         thisView.prerender();
 
         thisView.isRendered = false;
 
-        var $list = thisView.$el.find("ol"),
+        var $list = thisView.$el.find("#" + olId),
             nodeOrdering = thisView.model.getTopoSort();
+        $list = $list.length ? $list : $(document.createElement("ol"));
+        $list.attr("id", olId);
 
         // add the list elements with the correct properties
         var i = -1, len = nodeOrdering.length;
@@ -78,7 +83,19 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
           thisView.idToTitleView[curNode.id] = nliview;
           $list.append(nliview.render().el);
         }
+
         thisView.$list = $list;
+
+        // check if we're using a template
+        // TODO hack for meta compatibility
+        if (!thisView.useListTemplate()) {
+        // build the appropriate structure if we're not using a template
+        // TODO place header before wrapDiv
+          var $wrapDiv = $(document.createElement("div"));
+          $wrapDiv.attr("id", consts.wrapperId);
+          //$wrapDiv.append($list);
+          // thisView.$el.append($wrapDiv);
+        }
 
         thisView.postrender();
 
@@ -88,6 +105,13 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
 
       /** override in subclass */
       postrender: function () {
+      },
+
+      /**
+       * Return true if using a template (override in subclass)
+       */
+      useListTemplate: function () {
+        return false;
       },
 
       /**

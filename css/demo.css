@@ -1,0 +1,27 @@
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 1.0em;
+    overflow-x: hidden;
+}
+
+#explore-graph-view-wrapper{
+    height: 100%;
+    width: 100%;
+}
+
+#explore-view-wrapper{
+    display: none;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: white;
+}
+
+#explore-view{
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}

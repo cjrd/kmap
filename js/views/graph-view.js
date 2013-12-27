@@ -44,6 +44,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     edgeLenThresh: 250, // threshold length of edges to be shown by default
 
     graphClass: "graph",
+    viewId: "graph-view",
     hoveredClass: "hovered",
     pathWrapClass: "link-wrapper",
     pathClass: "link",
@@ -400,6 +401,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
 
   return Backbone.View.extend({
+
+    id: pvt.consts.viewId,
 
     /**
      * Initialize function

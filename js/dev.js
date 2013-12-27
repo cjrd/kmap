@@ -22,7 +22,7 @@ require(["main"], function(KMap){
 
       // insert them into the html
       $("#explore-graph-view-wrapper").append(graphView.$el);
-      $("#concept-list-wrapper").append(graphListView.$el);
+      $("#list-wrapper").append(graphListView.$el);
     });
 
   // add the data to the graph model
