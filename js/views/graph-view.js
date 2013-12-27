@@ -22,7 +22,7 @@
  */
 
 /*global define/*/
-define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], function(Utils, Backbone, d3, _, dagre, $) {
+define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d3, _, dagre, $) {
 
   /**********************
    * private class vars *
@@ -36,6 +36,13 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
     minusRectH: 5.5,
     exPlusWidth: 5,
     nodeRadius: 50,
+    maxZoomScale: 5, // maximum zoom-in level for graph
+    minZoomScale: 0.05, //maximum zoom-out level for graph
+    reduceNodeTitleLength: 4,
+    numWispPts: 10,
+    wispLen: 80,
+    edgeLenThresh: 250, // threshold length of edges to be shown by default
+
     graphClass: "graph",
     hoveredClass: "hovered",
     pathWrapClass: "link-wrapper",
@@ -47,10 +54,23 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
     edgeGIdPrefix: "edgeG-",
     depIconGClass: "dep-icon-g",
     olIconGClass: "ol-icon-g",
+    depCircleClass: "dep-circle",
+    olCircleClass: "ol-circle",
     reduceNodeTitleClass: "reduce-node-title",
-    reduceNodeTitleLength: 4,
-    doBTOpt: true,
-    graphDirection: "TB" // BT TB LR RL TODO consider making an option for the user
+    graphDirection: "TB", // BT TB LR RL TODO consider making an option for the user
+    wispGClass: "wispG",
+    startWispPrefix: "startp-",
+    endWispPrefix: "endp-",
+    startWispClass: "start-wisp",
+    endWispClass: "end-wisp",
+    wispWrapperClass: "short-link-wrapper",
+    linkWrapHoverClass: "link-wrapper-hover",
+    depLinkWrapHoverClass: "ol-show",
+    longEdgeClass: "long-edge",
+    wispDashArray: "3,3",
+    scopeClass: "scoped",
+    scopeCircleGClass: "scoped-circle-g",
+    focusCircleGClass: "focused-circle-g"
   };
 
   pvt.consts.plusPts = "0,0 " +
@@ -105,7 +125,28 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
     // svg nodes and edges
     thisView.gPaths = d3SvgG.append("g").selectAll("g");
     thisView.gCircles = d3SvgG.append("g").selectAll("g");
+
+    // apply zoom (can be overridden in subclass)
+    thisView.setupZoomTransListeners.call(thisView);
   };
+
+  /**
+   * Change the scope node classes for the corresponding g elements
+   */
+
+  pvt.changeNodeClasses = function (prevD, nextD, classVal) {
+    var thisView = this,
+        gId;
+    if (prevD) {
+      gId = thisView.getCircleGId(prevD.id);
+      d3.select("#" + gId).classed(classVal, false);
+    }
+    if (nextD) {
+      gId = thisView.getCircleGId(nextD.id);
+      d3.select("#" + gId).classed(classVal, true);
+    }
+  };
+
 
   // from http://bl.ocks.org/mbostock/3916621
   pvt.pathTween = function (d1, precision) {
@@ -131,6 +172,28 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
         return t < 1 ? "M" + points.map(function(p) { return p(t); }).join("L") : d1;
       };
     };
+  };
+
+  /**
+   * Get id of node element (d3, dom, or model)
+   */
+  pvt.getIdOfNodeType = function(node) {
+    var nodeFun = node.attr || node.getAttribute || node.get;
+    return nodeFun.call(node, "id");
+  };
+
+  /**
+   * Helper function to obtain id of summary txt div for a given node in the exporation view
+   */
+  pvt.getSummaryIdForDivTxt = function(node) {
+    return pvt.getIdOfNodeType.call(this, node) + pvt.consts.summaryDivSuffix;
+  };
+
+  /**
+   * Helper function to obtain id of wrapper div of summary txt for a given node in the exporation view
+   */
+  pvt.getSummaryIdForDivWrap = function(node) {
+    return pvt.getIdOfNodeType.call(this, node) + pvt.consts.summaryWrapDivSuffix;
   };
 
   pvt.addECIcon = function(d, d3el, isDeps){
@@ -232,9 +295,6 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
 
   return Backbone.View.extend({
 
-    // hack to call appRouter from view (must pass in approuter)
-    appRouter: null,
-
     /**
      * Initialize function
      * This function should not be overwritten in subclasses
@@ -250,6 +310,13 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
         doCircleTrans: false,
         doPathsTrans: false
       };
+
+      // onhover/click summary displays
+      // TODO reimplement these with both edges and nodes
+      thisView.summaryDisplays = {};
+      thisView.summaryDisplays = {};
+      thisView.summaryTOKillList = {};
+      thisView.summaryTOStartList = {};
 
       // TODO find a better way to communicate between views
       thisView.listenTo(thisView.model, "render", thisView.render);
@@ -274,6 +341,7 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
 
       d3.select("#optimize").on("click", function(){thisView.optimizeGraphPlacement.call(thisView, true);});
 
+      // TODO move to appropriate subclass since appRouter isn't used here
       if (inp !== undefined){
         thisView.appRouter = inp.appRouter;
       }
@@ -311,11 +379,11 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
       // set the paths to only contain visible paths FIXME do edges always have ids?
       thisView.gPaths = thisView.gPaths
         .data(thisView.model.get("edges")
-        .filter(function(mdl){
-          return thisView.isEdgeVisible(mdl);
-        }), function(d){
-          return d.id;
-        });
+              .filter(function(mdl){
+                return thisView.isEdgeVisible(mdl);
+              }), function(d){
+                return d.id;
+              });
 
       var gPaths = thisView.gPaths;
 
@@ -367,23 +435,23 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
         });
 
       newPathsG.transition()
-      .delay(thisView.newPathTransDelay)
-      .duration(thisView.newPathTransTime)
-      .attr("opacity", 1)
-      .each("end", function (d) {
-        // call post render function for edge
-        thisView.postRenderEdge.call(thisView, d, d3.select(this));
-      });
+        .delay(thisView.newPathTransDelay)
+        .duration(thisView.newPathTransTime)
+        .attr("opacity", 1)
+        .each("end", function (d) {
+          // call post render function for edge
+          thisView.postRenderEdge.call(thisView, d, d3.select(this));
+        });
 
       // call subview function
       thisView.handleNewPaths(newPathsG);
 
       // remove old links
       gPaths.exit()
-      .transition()
-      .duration(thisView.rmPathTransTime)
-      .attr("opacity", 0)
-      .remove(); // TODO add appropriate animation
+        .transition()
+        .duration(thisView.rmPathTransTime)
+        .attr("opacity", 0)
+        .remove(); // TODO add appropriate animation
 
       //***************
       // Render Circles
@@ -434,7 +502,7 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
 
       newGs.each(function(d){
         var d3this = d3.select(this);
-        Utils.insertTitleLinebreaks(d3this, d.get("title"), null, consts.reduceNodeTitleLength);
+        thisView.insertTitleLinebreaks(d3this, d.get("title"), null, consts.reduceNodeTitleLength);
         if (d3this.selectAll("tspan")[0].length > consts.reduceNodeTitleLength) {
           d3this.classed(consts.reduceNodeTitleClass, true);
         }
@@ -448,14 +516,24 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
           thisView.postRenderNode.call(thisView, d, d3.select(this));
         });
 
+      // apply common event listeners (override in sub)
+      newGs.on("mouseover", function(d) {
+        thisView.circleMouseOver.call(thisView, d, this);
+      })
+        .on("mouseout", function(d) {
+          thisView.circleMouseOut.call(thisView, d, this);
+        })
+        .on("mouseup", function (d) {
+          thisView.circleMouseUp.call(thisView, d, this);
+        });
 
       thisView.handleNewCircles(newGs);
 
       // // handle expand contract icons last
-       thisView.gCircles.each(function(d){
-         if (thisView.addECIcon || d.addECIcon) {
-           thisView.addExpContIcons(d, d3.select(this), thisView);
-         }
+      thisView.gCircles.each(function(d){
+        if (thisView.addECIcon || d.addECIcon) {
+          thisView.addExpContIcons(d, d3.select(this), thisView);
+        }
       });
 
       //***********
@@ -585,23 +663,23 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
       // TODO remove hard coded scale and duration
       var hasScope = thisView.scopeNode !== undefined && thisView.scopeNode !== null;
       var translateTrans = thisView.d3SvgG.transition()
-        .duration(500)
-        .attr("transform", function () {
-          // TODO move this function to pvt
-          var dzoom = thisView.dzoom,
-              dScale = dzoom.scale(),
-              svgBCR = thisView.d3Svg.node().parentElement.getBoundingClientRect(), // assumes the parent element wraps the intended width/height (firefox hack)
-              curScale = (hasScope || thisView.model.getNodes().length < 10) ? (dScale > 1 ? dScale : 1) : (dScale < 0.9 ? dScale : .6), //dzoom.scale(),
-              wx = svgBCR.width,
-              wy = svgBCR.height,
-              dispFract = d.get("dependencies").length ? (d.get("outlinks").length ? 0.5 : 4/5) : (1/5),
-              nextY = wy*dispFract - d.get("y")*curScale - pvt.consts.nodeRadius*curScale/2,
-              nextX = wx/2 - d.get("x")*curScale;
-          dzoom.translate([nextX, nextY]);
-          dzoom.scale(curScale);
-          thisView.state.isTransitioning = false;
-          return "translate(" + nextX + "," + nextY + ") scale(" + curScale + ")";
-        });
+            .duration(500)
+            .attr("transform", function () {
+              // TODO move this function to pvt
+              var dzoom = thisView.dzoom,
+                  dScale = dzoom.scale(),
+                  svgBCR = thisView.d3Svg.node().parentElement.getBoundingClientRect(), // assumes the parent element wraps the intended width/height (firefox hack)
+                  curScale = (hasScope || thisView.model.getNodes().length < 10) ? (dScale > 1 ? dScale : 1) : (dScale < 0.9 ? dScale : .6), //dzoom.scale(),
+                  wx = svgBCR.width,
+                  wy = svgBCR.height,
+                  dispFract = d.get("dependencies").length ? (d.get("outlinks").length ? 0.5 : 4/5) : (1/5),
+                  nextY = wy*dispFract - d.get("y")*curScale - pvt.consts.nodeRadius*curScale/2,
+                  nextX = wx/2 - d.get("x")*curScale;
+              dzoom.translate([nextX, nextY]);
+              dzoom.scale(curScale);
+              thisView.state.isTransitioning = false;
+              return "translate(" + nextX + "," + nextY + ") scale(" + curScale + ")";
+            });
       return translateTrans;
     },
 
@@ -633,6 +711,290 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
         d3this.selectAll("." + consts.olIconGClass).remove();
       }
     },
+
+    /**
+     * insert svg line breaks: taken from
+     * http://stackoverflow.com/questions/13241475/how-do-i-include-newlines-in-labels-in-d3-charts
+     * TODO this function has become far too large & needs to be refactored
+     */
+    insertTitleLinebreaks: function (gEl, title, splLen, reduceThresh) {
+      var words = title.split(/[-\s]+/g),
+          total = 0,
+          result = [],
+          resArr = [],
+          i;
+      splLen = splLen || 14;
+
+      // determine break points for words TODO shrink font if necessary
+      for (i = 0; i < words.length; i++) {
+        if (total + words[i].length + 1 > splLen && total !== 0) {
+          resArr.push(result.join(" "));
+          result = [];
+          total = 0;
+        }
+        result.push(words[i]);
+        total += words[i].length + 1;
+      }
+      resArr.push(result.join(" "));
+
+      var dy = resArr.length > reduceThresh ? '10' : '15';
+
+      var el = gEl.append("text")
+            .attr("text-anchor","middle")
+            .attr("dy", "-" + (resArr.length-1)*dy*6.5/15);
+
+
+      for (i = 0; i < resArr.length; i++) {
+        var tspan = el.append('tspan').text(resArr[i]);
+        if (i > 0)
+          tspan.attr('x', 0).attr('dy', dy);
+      }
+    },
+
+    /**
+     * Apply the zoom/translate listeners (can be overwritten in sub)
+     */
+    setupZoomTransListeners: function () {
+      var thisView = this,
+          consts = pvt.consts;
+
+      thisView.dzoom = d3.behavior.zoom();
+      var dzoom = thisView.dzoom;
+      // make graph zoomable/translatable
+      var vis = thisView.d3Svg
+            .attr("pointer-events", "all")
+            .attr("viewBox", null)
+            .call(dzoom.on("zoom", redraw))
+            .select("g");
+
+      // set the zoom scale
+      dzoom.scaleExtent([consts.minZoomScale, consts.maxZoomScale]);
+      var summaryDisplays = thisView.summaryDisplays,
+          nodeLoc,
+          d3event,
+          currentScale;
+
+      // helper function to redraw svg graph with correct coordinates
+      function redraw() {
+        // transform the graph
+        thisView.state.justDragged = true;
+        d3event = d3.event;
+        currentScale = d3event.scale;
+        thisView.prevScale = currentScale;
+        vis.attr("transform", "translate(" + d3event.translate + ")" + " scale(" + currentScale + ")");
+        // move the summary divs if needed
+        $.each(summaryDisplays, function(key, val){
+          nodeLoc = pvt.getSummaryBoxPlacement(val.d3circle.node().getBoundingClientRect(), val.placeLeft);
+          val.$wrapDiv.css(nodeLoc);
+        });
+      }
+    },
+
+    /**
+     * Add visual mouse over properties to the explore nodes
+     */
+    circleMouseOver: function(d, nodeEl) {
+      var thisView = this,
+          consts = pvt.consts,
+          hoveredClass = consts.hoveredClass,
+          d3node = d3.select(nodeEl);
+
+      thisView.preCircleMouseOver(d, nodeEl);
+
+      if (d3node.classed(hoveredClass)){
+        d3node.classed(hoveredClass, true);
+        return false;
+      }
+
+      var nodeId = nodeEl.id;
+
+      // add the appropriate class
+      d3node.classed(hoveredClass, true);
+
+      // show/emphasize connecting edges
+      d.get("outlinks").each(function (ol) {
+        d3.select("#" + consts.edgeGIdPrefix + ol.id)
+          .classed(consts.linkWrapHoverClass, true)
+          .classed(consts.depLinkWrapHoverClass, true);
+        if (thisView.isEdgeVisible(ol)){
+          d3.select("#" + consts.circleGIdPrefix + ol.get("target").id)
+            .select("circle")
+            .classed(consts.olCircleClass, true);
+        }
+      });
+      d.get("dependencies").each(function (dep) {
+        d3.select("#" + consts.edgeGIdPrefix + dep.id)
+          .classed(consts.linkWrapHoverClass, true);
+        if (thisView.isEdgeVisible(dep)){
+          d3.select("#" + consts.circleGIdPrefix + dep.get("source").id)
+            .select("circle")
+            .classed(consts.depCircleClass, true);
+        }
+      });
+
+      // TODO find a different way to present summaries on mouse over (e.g. with a button click)
+      // // add node summary if not already present
+      // if (thisView.summaryTOKillList.hasOwnProperty(nodeId)){
+      //   window.clearInterval(thisView.summaryTOKillList[nodeId]);
+      //   delete thisView.summaryTOKillList[nodeId];
+      // }
+      // thisView.attachNodeSummary(d, d3node);
+
+      thisView.postCircleMouseOver(d, nodeEl);
+      return 0;
+    },
+
+    /**
+     * Remove mouse over properties from the explore nodes
+     */
+    circleMouseOut:  function(d, nodeEl) {
+      var thisView = this,
+          relTarget = d3.event.relatedTarget;;
+      thisView.preCircleMouseOut(d, nodeEl);
+
+      // check if we're in a semantically related el
+      if (!relTarget || $.contains(nodeEl, relTarget) || (relTarget.id && relTarget.id.match(nodeEl.id))){
+        return;
+      }
+
+      var d3node = d3.select(nodeEl),
+          summId = pvt.getSummaryIdForDivWrap.call(thisView, d3node),
+          consts = pvt.consts,
+          hoveredClass = consts.hoveredClass,
+          nodeId = nodeEl.id;
+
+      d3node.classed(hoveredClass, false); // FIXME align class options once summary display is figured out
+      // show/emphasize connecting edges
+      d.get("outlinks").each(function (ol) {
+        d3.select("#" + consts.edgeGIdPrefix + ol.id)
+          .classed(consts.linkWrapHoverClass, false)
+          .classed(consts.depLinkWrapHoverClass, false);
+        d3.select("#" + consts.circleGIdPrefix + ol.get("target").id)
+          .select("circle")
+          .classed(consts.olCircleClass, false);
+
+      });
+      d.get("dependencies").each(function (dep) {
+        d3.select("#" + consts.edgeGIdPrefix + dep.id)
+          .classed(consts.linkWrapHoverClass, false);
+        d3.select("#" + consts.circleGIdPrefix + dep.get("source").id)
+          .select("circle")
+          .classed(consts.depCircleClass, false);
+
+      });
+
+      if(thisView.summaryTOStartList.hasOwnProperty(nodeId)){
+        window.clearInterval(thisView.summaryTOStartList[nodeId]);
+        delete thisView.summaryTOStartList[nodeId];
+        d3node.classed(hoveredClass, false);
+      }
+      else{
+        // wait a bit before removing the summary
+        thisView.summaryTOKillList[nodeId] = window.setTimeout(function(){
+          delete thisView.summaryTOKillList[nodeId];
+          if (thisView.summaryDisplays[summId] && !thisView.summaryDisplays[summId].$wrapDiv.hasClass(hoveredClass)){
+            d3.select("#" + summId).remove(); // use d3 remove for x-browser support
+            delete thisView.summaryDisplays[summId];
+            d3node.classed(hoveredClass, false);
+          }
+        }, consts.summaryHideDelay);
+      }
+      thisView.postCircleMouseOut(d, nodeEl);
+    },
+
+    /**
+     * Mouse up on the concept circle
+     */
+    circleMouseUp: function (d, domEl) {
+      var thisView = this;
+      thisView.preCircleMouseUp();
+
+      if (thisView.state.justDragged || thisView.state.iconClicked) {
+        return false;
+      }
+
+      thisView.model.expandGraph();
+
+      if (thisView.scopeNode && thisView.scopeNode.id === d.id) {
+        thisView.nullScopeNode();
+        thisView.centerForNode(d).each("end", function () {
+          thisView.optimizeGraphPlacement(true, false, d.id);
+        });
+        return false;
+      } else {
+        thisView.setScopeNode(d);
+      }
+
+      // change noded TODO remove apRouter from base graph view
+      if (thisView.appRouter) {
+        thisView.appRouter.changeUrlParams({focus: d.id});
+      }
+
+      // contract the graph from the deps and ols
+      var edgeShowList = [],
+          nodeShowList = [d.id];
+
+      var showOLs = d.get("outlinks").filter(function(ol){
+        return thisView.isEdgeVisible(ol);
+      });
+      showOLs.forEach(function(ol){
+        nodeShowList.push(ol.get("target").id);
+      });
+      edgeShowList = edgeShowList.concat(showOLs.map(function(ol){return ol.id;}));
+      var showDeps = d.get("dependencies")
+            .filter(function(dep){
+              return thisView.isEdgeVisible(dep);
+            });
+      showDeps.forEach(function(dep){
+        nodeShowList.push(dep.get("source").id);
+      });
+      edgeShowList = edgeShowList.concat(showDeps.map(function(dep){return dep.id;}));
+
+      // contract edges
+      var edges = thisView.model.getEdges();
+      thisView.model.getEdges()
+        .each(function (edge) {
+          edge.set("isContracted", edgeShowList.indexOf(edge.id) === -1);
+        });
+      // contract nodes
+      var nodes = thisView.model.getNodes();
+      nodes
+        .forEach(function (node) {
+          node.set("isContracted", nodeShowList.indexOf(node.id) === -1);
+        });
+
+      // update data for the info box (# of hidden nodes/edges)
+      thisView.numHiddenNodes = nodes.length - nodeShowList.length;
+      thisView.numHiddenEdges = edges.length - edgeShowList.length;
+
+      // transition the g so the node is centered
+      thisView.centerForNode(d).each("end", function () {
+        thisView.optimizeGraphPlacement(true, false, d.id, true);
+      });
+
+      thisView.postCircleMouseUp();
+      return true;
+    },
+
+    // /**
+    //  * Helper function to attach the summary div and add an event listener  leaving the summary
+    //  */
+    // attachNodeSummary: function(d, d3node){
+    //   // display the node summary
+    //   var $wrapDiv = this.showNodeSummary(d, d3node);
+    //   var hoveredClass = pvt.consts.hoveredClass;
+
+    //   $wrapDiv.on("mouseenter", function(){
+    //     $(this).addClass(hoveredClass);
+    //   });
+    //   // add listener to node summary so mouseouts trigger mouseout on node
+    //   $wrapDiv.on("mouseleave", function(evt) {
+    //     $(this).removeClass(hoveredClass);
+    //     Utils.simulate(d3node.node(), "mouseout", {
+    //       relatedTarget: evt.relatedTarget
+    //     });
+    //   });
+    // },
 
     /**
      * Return the g element of the path from the given model
@@ -718,8 +1080,37 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
       return true;
     },
 
+    /**
+     * Set the scope node
+     */
+    setScopeNode: function (d) {
+      var thisView = this;
+      pvt.changeNodeClasses.call(thisView, thisView.scopeNode, d, pvt.consts.scopeCircleGClass);
+      thisView.scopeNode = d;
+      // delay info box so that animations finish
+      window.setTimeout(function () {
+        thisView.$el.addClass(pvt.consts.scopeClass);
+      }, 800);
+    },
+
+    /**
+     * Remove the current scope node
+     */
+    nullScopeNode: function (d) {
+      var thisView = this;
+      pvt.changeNodeClasses.call(thisView, thisView.scopeNode, null, pvt.consts.scopeCircleGClass);
+      thisView.scopeNode = null;
+      thisView.$el.removeClass(pvt.consts.scopeClass);
+    },
+
+    setFocusNode: function (d) {
+      var thisView = this;
+      pvt.changeNodeClasses.call(thisView, thisView.focusNode, d, pvt.consts.focusCircleGClass);
+      thisView.focusNode = d;
+    },
+
     //********************
-    // ABSTRACT METHODS
+    // "ABSTRACT" METHODS
     //*******************
 
     /**
@@ -748,16 +1139,17 @@ define(["utils/utils", "backbone", "d3", "underscore", "dagre", "jquery"], funct
 
     // override in subclass
     windowKeyDown: function() {},
-
-    // override in subclass
     windowKeyUp: function() {},
-
-    // override in subclass
     handleNewPaths: function() {},
+    handleNewCircles: function () {},
+    firstRender: function (){},
+    preCircleMouseOut: function () {},
+    postCircleMouseOut: function () {},
+    preCircleMouseOver: function () {},
+    postCircleMouseOver: function () {},
+    preCircleMouseUp: function () {},
+    postCircleMouseUp: function () {}
 
-    // override in subclass
-    firstRender: function(){
-    }
   });
 
 });

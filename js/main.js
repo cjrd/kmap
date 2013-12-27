@@ -2,7 +2,7 @@
  * Basic kmap demonstration
  */
 
-/*global requirejs*/
+/*global requirejs, define*/
 
 // configure requirejs
 requirejs.config(  {
@@ -36,13 +36,14 @@ requirejs.config(  {
 });
 
 //main execution
-requirejs(["models/graph-model", "views/graph-view", "views/concept-list-view", "jquery", "btouch"], function(GraphModel, GraphView, ListView){
+define(["models/graph-model", "views/graph-view", "views/concept-list-view", "jquery", "btouch"], function(GraphModel, GraphView, ListView){
   var KMap = {};
-  var graphModel = new GraphModel();
-  KMap.Graph = GraphView({model: graphModel});
-  KMap.List = ListView({model: graphModel});
+  KMap.GraphModel = GraphModel;
+  KMap.GraphView = GraphView;
+  KMap.GraphListView = ListView;
   /* make the KMap object global
      this hack provides a library-esk mode for kmap
      and preserves metacademy integration */
   window.KMap = KMap;
+  return KMap;
 });

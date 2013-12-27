@@ -1,6 +1,30 @@
 // development testing script - not used for library
 
-/*global require*/
-require(["main"], function(){
-  console.log("test");
+/*global require, KMap*/
+require(["main"], function(KMap){
+  // create the model and pass it into the views
+  var graphModel = new KMap.GraphModel(),
+      graphView = new KMap.GraphView({model: graphModel}),
+      graphListView = new KMap.GraphListView({model: graphModel});
+
+  // fetch some graph data
+  $.getJSON("/data/tiny_demo_graph.json",
+    function (data) {
+      // add the data to the graph model
+      graphModel.addJsonNodesToGraph(data);
+
+      // render the views
+      graphView.render();
+      graphListView.render();
+
+      // insert them into the html
+      $("#explore-graph-view-wrapper").append(graphView.$el);
+      $("#concept-list-wrapper").append(graphListView.$el);
+    });
+
+  // add the data to the graph model
+
+
+  // render the views and insert them in a desired location
+
 });
