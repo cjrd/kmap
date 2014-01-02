@@ -1,6 +1,6 @@
 // development testing script - not used for library
 
-/*global require, KMap*/
+/*global require, KMap, $*/
 require(["main"], function(KMap){
   // create the model and pass it into the views
   var graphModel = new KMap.GraphModel(),
@@ -10,6 +10,7 @@ require(["main"], function(KMap){
   // fetch some graph data
   $.getJSON("/data/demo_kmap.json",
     function (data) {
+
       // add the data to the graph model
       graphModel.addJsonNodesToGraph(data);
 
@@ -21,8 +22,8 @@ require(["main"], function(KMap){
       graphListView.render();
 
       // insert them into the html
-      $("#explore-graph-view-wrapper").append(graphView.$el);
-      $("#list-wrapper").append(graphListView.$el);
+      $("body").prepend(graphListView.$el);
+      $("#graph-view-wrapper").append(graphView.$el);
     });
 
   // add the data to the graph model

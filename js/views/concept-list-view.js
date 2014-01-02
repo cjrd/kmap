@@ -14,10 +14,13 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
       viewId: "concept-list-panel",
       activeClass: "active",
       olId: "concept-list",
-      wrapperId: "concept-list-wrapper"
+      wrapperId: "concept-list-wrapper",
+      templateId : "concept-list-template"
     };
 
     return Backbone.View.extend({
+
+      template: _.template(document.getElementById(pvt.consts.templateId).innerHTML),
 
       id: pvt.consts.viewId,
 
@@ -51,7 +54,7 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
       /** override in subclass */
       prerender: function (inp) {
         var thisView = this;
-        thisView.$el.html("");
+        thisView.$el.html(thisView.template());
       },
 
       /**
@@ -86,32 +89,22 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
 
         thisView.$list = $list;
 
-        // check if we're using a template
-        // TODO hack for meta compatibility
-        if (!thisView.useListTemplate()) {
-        // build the appropriate structure if we're not using a template
-        // TODO place header before wrapDiv
-          var $wrapDiv = $(document.createElement("div"));
-          $wrapDiv.attr("id", consts.wrapperId);
-          //$wrapDiv.append($list);
-          // thisView.$el.append($wrapDiv);
-        }
-
         thisView.postrender();
+
+        var $wrap = thisView.$el.find("#" + consts.wrapperId);
+        $wrap.height($(window).height());
+        $(window).resize(function () {
+          $wrap.height($(window).height());
+        });
 
         thisView.isRendered = true;
         return thisView;
       },
 
-      /** override in subclass */
+      /** can override in subclass */
       postrender: function () {
-      },
-
-      /**
-       * Return true if using a template (override in subclass)
-       */
-      useListTemplate: function () {
-        return false;
+        var thisView = this;
+        thisView.$el.find("#" + pvt.consts.olId).append(thisView.$list);
       },
 
       /**

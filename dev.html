@@ -7,12 +7,44 @@
   </head>
   <body>
 
-    <div id="list-wrapper">
+    <div id="main-display-view">
+
+      <div id="graph-view-wrapper">
+      </div>
+
     </div>
 
-    <div id="explore-graph-view-wrapper">
-    </div>
+    <!-- Underscore Templates -->
+    <script type="text/template" id="concept-list-template">
 
+      <div id="concept-list-show-button" class="small-vp-button">
+        Concept List
+      </div>
+
+      <div id="concept-list-wrapper">
+        <div id="concept-title-header">
+          <h1>
+            Learning Plan
+          </h1>
+          <div id="explore-learn-tools">
+            <div id="concept-list-search">
+              <input type="text" id="concept-list-search-input" placeholder="enter the name of a concept to find it">
+              <input type="button" value="Clear" id="cancel-search-input">
+            </div>
+
+            <div id="concept-list-hide-button">
+              <i class="icon ion-ios7-arrow-left"> </i>
+            </div>
+          </div>
+          </div>
+
+          <ol id="concept-list">
+          </ol>
+        </div>
+    </script>
+
+    <!-- js -->
     <script data-main="js/dev.js" src="js/lib/require-min.js"></script>
+
   </body>
 </html>

@@ -21,6 +21,8 @@ define(["backbone", "underscore"], function (Backbone, _) {
 
       tagName: "li",
 
+      className: pvt.consts.viewClass,
+
       // TODO handle click event correctly
       events: {},
 
@@ -50,14 +52,14 @@ define(["backbone", "underscore"], function (Backbone, _) {
         var thisView = this;
         thisView.prerender();
 
-
         thisView.postrender();
         return thisView;
       },
 
       /** override in subclass */
       postrender: function () {
-        // TODO figure out how to return a list item correctly...
+        var thisView = this;
+        thisView.$el.html(thisView.model.get("title"));
       },
 
       /**
