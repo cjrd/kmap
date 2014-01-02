@@ -15,9 +15,13 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
     },
 
     initialize: function(){
-      this.edgeModel = this.get("edges").model;
-      this.nodeModel = this.get("nodes").model;
-      this.postinitialize();
+      var thisModel = this;
+      thisModel.edgeModel = thisModel.get("edges").model;
+      thisModel.nodeModel = thisModel.get("nodes").model;
+      thisModel.get("nodes").on("setFocusNode", function(id){
+        thisModel.trigger("setFocusNode", id);
+      });
+      thisModel.postinitialize();
     },
 
 

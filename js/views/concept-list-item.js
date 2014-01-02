@@ -24,7 +24,12 @@ define(["backbone", "underscore"], function (Backbone, _) {
       className: pvt.consts.viewClass,
 
       // TODO handle click event correctly
-      events: {},
+      events: {
+        "click": function(evt){
+          var thisView = this;
+          thisView.model.trigger("setFocusNode", thisView.model.id);
+        }
+      },
 
       /** override in subclass */
       preinitialize: function () {},

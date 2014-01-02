@@ -429,6 +429,12 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // TODO find a better way to communicate between views
       thisView.listenTo(thisView.model, "render", thisView.render);
+      thisView.listenTo(thisView.model, "setFocusNode", function (id) {
+        var inpNode = thisView.model.getNode(id);
+        thisView.setFocusNode(inpNode);
+        thisView.centerForNode(inpNode);
+      });
+
 
       // set instance variables -- can overwrite in subclasses
       thisView.pathTransTime = 500;
