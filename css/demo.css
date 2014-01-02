@@ -5,6 +5,7 @@ body {
     height: 100%;
     font-size: 1.0em;
     overflow: hidden;
+    font-family: "Lato", Arial, sans-serif;
 }
 
 #graph-view-wrapper{
