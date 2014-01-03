@@ -148,7 +148,8 @@ module.exports = function() {
     // Initial graph attributes
     var graphValue = inputGraph.graph() || {};
     g.graph({
-      rankDir: graphValue.rankDir || config.rankDir
+      rankDir: graphValue.rankDir || config.rankDir,
+      orderRestarts: graphValue.orderRestarts
     });
 
     return g;
@@ -341,28 +342,53 @@ function order(g, maxSweeps) {
     maxSweeps = DEFAULT_MAX_SWEEPS;
   }
 
+  var restarts = g.graph().orderRestarts || 0;
+
   var layerGraphs = initLayerGraphs(g);
   // TODO: remove this when we add back support for ordering clusters
   layerGraphs.forEach(function(lg) {
     lg = lg.filterNodes(function(u) { return !g.children(u).length; });
   });
 
-  initOrder(g);
+  var iters = 0,
+      currentBestCC,
+      allTimeBestCC = Number.MAX_VALUE,
+      allTimeBest = {};
 
-  util.log(2, 'Order phase start cross count: ' + g.graph().orderInitCC);
-
-  var i, lastBest;
-  for (i = 0, lastBest = 0; lastBest < 4 && i < maxSweeps; ++i, ++lastBest) {
-    sweep(g, layerGraphs, i);
-    if (saveBest(g)) {
-      lastBest = 0;
-    }
-    util.log(3, 'Order phase iter ' + i + ' cross count: ' + g.graph().orderCC);
+  function saveAllTimeBest() {
+    g.eachNode(function(u, value) { allTimeBest[u] = value.order; });
   }
 
-  restoreBest(g);
+  for (var j = 0; j < Number(restarts) + 1 && allTimeBestCC !== 0; ++j) {
+    currentBestCC = Number.MAX_VALUE;
+    initOrder(g, restarts > 0);
 
-  util.log(2, 'Order iterations: ' + i);
+    util.log(2, 'Order phase start cross count: ' + g.graph().orderInitCC);
+
+    var i, lastBest, cc;
+    for (i = 0, lastBest = 0; lastBest < 4 && i < maxSweeps && currentBestCC > 0; ++i, ++lastBest, ++iters) {
+      sweep(g, layerGraphs, i);
+      cc = crossCount(g);
+      if (cc < currentBestCC) {
+        lastBest = 0;
+        currentBestCC = cc;
+        if (cc < allTimeBestCC) {
+          saveAllTimeBest();
+          allTimeBestCC = cc;
+        }
+      }
+      util.log(3, 'Order phase start ' + j + ' iter ' + i + ' cross count: ' + cc);
+    }
+  }
+
+  Object.keys(allTimeBest).forEach(function(u) {
+    if (!g.children || !g.children(u).length) {
+      g.node(u).order = allTimeBest[u];
+    }
+  });
+  g.graph().orderCC = allTimeBestCC;
+
+  util.log(2, 'Order iterations: ' + iters);
   util.log(2, 'Order phase best cross count: ' + g.graph().orderCC);
 }
 
@@ -406,42 +432,6 @@ function sweepUp(g, layerGraphs) {
   for (i = layerGraphs.length - 2; i >= 0; --i) {
     sortLayer(layerGraphs[i], cg, successorWeights(g, layerGraphs[i].nodes()));
   }
-}
-
-/*
- * Checks if the current ordering of the graph has a lower cross count than the
- * current best. If so, saves the ordering of the current nodes and the new
- * best cross count. This can be used with restoreBest to restore the last best
- * ordering.
- *
- * If this is the first time running the function the current ordering will be
- * assumed as the best.
- *
- * Returns `true` if this layout represents a new best.
- */
-function saveBest(g) {
-  var graph = g.graph();
-  var cc = crossCount(g);
-  if (!('orderCC' in graph) || graph.orderCC > cc) {
-    graph.orderCC = cc;
-    graph.order = {};
-    g.eachNode(function(u, value) {
-      if ('order' in value) {
-        graph.order[u] = value.order;
-      }
-    });
-    return true;
-  }
-  return false;
-}
-
-function restoreBest(g) {
-  var order = g.graph().order;
-  g.eachNode(function(u, value) {
-    if ('order' in value) {
-      value.order = order[u];
-    }
-  });
 }
 
 },{"./order/crossCount":5,"./order/initLayerGraphs":6,"./order/initOrder":7,"./order/sortLayer":8,"./util":17}],5:[function(require,module,exports){
@@ -553,7 +543,8 @@ function initLayerGraphs(g) {
 }
 
 },{"cp-data":19,"graphlib":23}],7:[function(require,module,exports){
-var crossCount = require('./crossCount');
+var crossCount = require('./crossCount'),
+    util = require('../util');
 
 module.exports = initOrder;
 
@@ -563,25 +554,33 @@ module.exports = initOrder;
  * arranges each node of each rank. If no constraint graph is provided the
  * order of the nodes in each rank is entirely arbitrary.
  */
-function initOrder(g) {
-  var orderCount = [];
+function initOrder(g, random) {
+  var layers = [];
 
-  function addNode(u, value) {
-    if ('order' in value) return;
+  g.eachNode(function(u, value) {
+    var layer = layers[value.rank];
     if (g.children && g.children(u).length > 0) return;
-    if (!(value.rank in orderCount)) {
-      orderCount[value.rank] = 0;
+    if (!layer) {
+      layer = layers[value.rank] = [];
     }
-    value.order = orderCount[value.rank]++;
-  }
+    layer.push(u);
+  });
 
-  g.eachNode(function(u, value) { addNode(u, value); });
+  layers.forEach(function(layer) {
+    if (random) {
+      util.shuffle(layer);
+    }
+    layer.forEach(function(u, i) {
+      g.node(u).order = i;
+    });
+  });
+
   var cc = crossCount(g);
   g.graph().orderInitCC = cc;
   g.graph().orderCC = Number.MAX_VALUE;
 }
 
-},{"./crossCount":5}],8:[function(require,module,exports){
+},{"../util":17,"./crossCount":5}],8:[function(require,module,exports){
 var util = require('../util');
 /*
     Digraph = require('graphlib').Digraph,
@@ -1570,8 +1569,9 @@ function feasibleTree(g) {
   }
 
   function addTightEdges(v) {
+    var continueToScan = true;
     g.predecessors(v).forEach(function(u) {
-      if (remaining.has(u) && slack(g, u, v) === 0) {
+      if (remaining.has(u) && !slack(g, u, v)) {
         if (remaining.has(v)) {
           tree.addNode(v, {});
           remaining.remove(v);
@@ -1582,11 +1582,12 @@ function feasibleTree(g) {
         tree.addEdge(null, u, v, { reversed: true });
         remaining.remove(u);
         addTightEdges(u);
+        continueToScan = false;
       }
     });
 
     g.successors(v).forEach(function(w)  {
-      if (remaining.has(w) && slack(g, v, w) === 0) {
+      if (remaining.has(w) && !slack(g, v, w)) {
         if (remaining.has(v)) {
           tree.addNode(v, {});
           remaining.remove(v);
@@ -1597,24 +1598,30 @@ function feasibleTree(g) {
         tree.addEdge(null, v, w, {});
         remaining.remove(w);
         addTightEdges(w);
+        continueToScan = false;
       }
     });
+    return continueToScan;
   }
 
   function createTightEdge() {
     var minSlack = Number.MAX_VALUE;
     remaining.keys().forEach(function(v) {
       g.predecessors(v).forEach(function(u) {
-        var edgeSlack = slack(g, u, v);
-        if (Math.abs(edgeSlack) < Math.abs(minSlack)) {
-          minSlack = -edgeSlack;
+        if (!remaining.has(u)) {
+          var edgeSlack = slack(g, u, v);
+          if (Math.abs(edgeSlack) < Math.abs(minSlack)) {
+            minSlack = -edgeSlack;
+          }
         }
       });
 
       g.successors(v).forEach(function(w) {
-        var edgeSlack = slack(g, v, w);
-        if (Math.abs(edgeSlack) < Math.abs(minSlack)) {
-          minSlack = edgeSlack;
+        if (!remaining.has(w)) {
+          var edgeSlack = slack(g, v, w);
+          if (Math.abs(edgeSlack) < Math.abs(minSlack)) {
+            minSlack = edgeSlack;
+          }
         }
       });
     });
@@ -1624,7 +1631,9 @@ function feasibleTree(g) {
 
   while (remaining.size()) {
     var nodesToSearch = !tree.order() ? remaining.keys() : tree.nodes();
-    nodesToSearch.forEach(addTightEdges);
+    for (var i = 0, il = nodesToSearch.length;
+         i < il && addTightEdges(nodesToSearch[i]);
+         ++i);
     if (remaining.size()) {
       createTightEdge();
     }
@@ -2043,6 +2052,15 @@ exports.values = function(obj) {
   return Object.keys(obj).map(function(k) { return obj[k]; });
 };
 
+exports.shuffle = function(array) {
+  for (i = array.length - 1; i > 0; --i) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var aj = array[j];
+    array[j] = array[i];
+    array[i] = aj;
+  }
+};
+
 exports.propertyAccessor = function(self, config, field, setHook) {
   return function(x) {
     if (!arguments.length) return config[field];
@@ -2111,7 +2129,7 @@ log.level = 0;
 exports.log = log;
 
 },{}],18:[function(require,module,exports){
-module.exports = '0.4.1';
+module.exports = '0.4.2';
 
 },{}],19:[function(require,module,exports){
 exports.Set = require('./lib/Set');

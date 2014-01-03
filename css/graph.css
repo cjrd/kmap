@@ -10,6 +10,41 @@
     width: 100%;
 }
 
+#graph-summary-el{
+    z-index: 10;
+    bottom: 0;
+    position: absolute;
+    text-align: center;
+    pointer-events: none;
+    background-color: #F7F7F7;
+    box-sizing: border-box;
+    border: 1px solid #333;
+    border-radius: 5px 5px 0 0;
+    left: 1em;
+    padding: 0.5em;
+    right: 1em;
+    line-height: 1.3em;
+    display: none;
+}
+
+#graph-summary-el h1{
+    pointer-events: none;
+    font-size: 1em;
+    font-weight: bold;
+    margin: 0 0 0.2em 0;
+}
+
+#graph-summary-el ul{
+    margin: 0;
+    list-style: none;
+}
+
+#graph-summary-el li{
+    margin-top: 0.1em;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
 /* Concept Gs */
 .concept-g{
     cursor: default;
@@ -28,7 +63,6 @@
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
-
 }
 
 .concept-g.reduce-node-title text{

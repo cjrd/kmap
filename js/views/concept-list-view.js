@@ -83,6 +83,7 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
         for(; ++i < len;){
           curNode = nodes.get(nodeOrdering[i]);
           nliview = new thisView.ListItem({model: curNode, appRouter: appRouter});
+          nliview.parentView = thisView;
           thisView.idToTitleView[curNode.id] = nliview;
           $list.append(nliview.render().el);
         }
@@ -132,6 +133,8 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
 
       /**
        * Change the selected title element
+       *
+       * @param selId - the model id of the selected element
        */
       changeSelectedTitle: function (selId) {
         var thisView = this,

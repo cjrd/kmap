@@ -8,7 +8,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
     defaults: function(){
       return {
-        roots: [], // TODO perhaps this should be stored in the nodes
+        leafs: [], // TODO perhaps this should be stored in the nodes
         edges: new BaseEdgeCollection(),
         nodes: new BaseNodeCollection()
       };
@@ -273,39 +273,53 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       var thisGraph = this,
           nodes = thisGraph.getNodes(),
           traversedNodes = {}, // keep track of traversed nodes
-          startRootNodes;
+          startLeafNodes;
 
       // init: obtain node tags with 0 outlinks (root nodes)
-      startRootNodes = _.map(nodes.filter(function(mdl){
+      startLeafNodes = _.map(nodes.filter(function(mdl){
         return mdl.get("outlinks").length == 0;
       }), function(itm){
         return itm.get("id");
       });
 
-      thisGraph.topoSort = dfsTopSort(startRootNodes);
+      thisGraph.topoSort = dfsTopSort(startLeafNodes);
 
       // recursive dfs topological sort
       // TODO this should be defined in pvt?
-      function dfsTopSort (rootNodeTags, prevRootTag){
-        var curRootNodeTagDepth,
+      function dfsTopSort (leafNodeTags){
+        var curLeafNodeTagDepth,
             returnArr = [],
-            rootNodeRoundArr = [],
-            curRootNodeTag,
-            unqDepTags,
+            curLeafNodeTag,
+            directDeps,
             curNode;
 
-        // recurse on the input root node tags
+        // recurse on the input leaf node tags
         // -- use edge weight to do the ordering if available
-        for(curRootNodeTagDepth = 0; curRootNodeTagDepth < rootNodeTags.length; curRootNodeTagDepth++){
-          curRootNodeTag = rootNodeTags[curRootNodeTagDepth];
-          curNode = nodes.get(curRootNodeTag);
-          if (!traversedNodes.hasOwnProperty(curRootNodeTag)){
-            unqDepTags = curNode.getUniqueDeps();
-            if (unqDepTags.length > 0){
-              returnArr = returnArr.concat(dfsTopSort(unqDepTags, curRootNodeTag));
+        for(curLeafNodeTagDepth = 0; curLeafNodeTagDepth < leafNodeTags.length; curLeafNodeTagDepth++){
+          curLeafNodeTag = leafNodeTags[curLeafNodeTagDepth];
+          curNode = nodes.get(curLeafNodeTag);
+
+          if (!traversedNodes.hasOwnProperty(curLeafNodeTag)) {
+          // && curNode.get("dependencies").every(function (dep) {
+          //     return traversedNodes.hasOwnProperty(dep.get("source").id);
+          //   })
+          // ){
+            // if (prevLeafTag) {
+            //   // mark edges in topological sort edges
+            //   var topoEdge = curNode.get("dependencies").filter(function (fedge) {
+            //       return fedge.get("source").id === prevLeafTag;
+            //   })[0];
+            //   topoEdge.isTopoEdge = true;
+            // }
+            directDeps = curNode.getDirectDeps();
+            traversedNodes[curLeafNodeTag] = 1;
+            if (directDeps.length > 0){
+              returnArr = returnArr.concat(dfsTopSort(directDeps.map(function (dep) {
+                return dep.get("source").id;
+              })));
             }
-            returnArr.push(curRootNodeTag);
-            traversedNodes[curRootNodeTag] = 1;
+            returnArr.push(curLeafNodeTag);
+
           }
         }
         return returnArr;
@@ -321,7 +335,18 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       thisGraph.getNodes().each(function (node) {
         node.set("isContracted", false);
       });
-    }
+    },
 
+    /**
+     * Check if the input edge is present in the topological sort
+     */
+    isEdgeInTopoSort: function(edge){
+      var thisGraph = this;
+      // make sure we've done a topological sort
+      if (!thisGraph.topoSort){
+        thisGraph.doTopoSort();
+      }
+      return edge.isTopoEdge;
+    }
   });
 });

@@ -41,10 +41,11 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     reduceNodeTitleLength: 4,
     numWispPts: 10,
     wispLen: 80,
-    edgeLenThresh: 250, // threshold length of edges to be shown by default
+    edgeLenThresh: 285, // threshold length of edges to be shown by default
 
     graphClass: "graph",
     viewId: "graph-view",
+    summaryElId: "graph-summary-el",
     hoveredClass: "hovered",
     pathWrapClass: "link-wrapper",
     pathClass: "link",
@@ -71,7 +72,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     wispDashArray: "3,3",
     scopeClass: "scoped",
     scopeCircleGClass: "scoped-circle-g",
-    focusCircleGClass: "focused-circle-g"
+    focusCircleGClass: "focused-circle-g",
+    summaryTransTime: 200
   };
 
   pvt.consts.plusPts = "0,0 " +
@@ -102,7 +104,13 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
    * First render renders the svg and sets up all of the listeners
    */
   pvt.firstRenderBase = function(){
-    var thisView = this;
+    var thisView = this,
+        consts = pvt.consts;
+
+    // append summary element
+    thisView.$summaryEl = $(document.createElement("div"));
+    thisView.$summaryEl.attr("id", consts.summaryElId);
+    thisView.$el.append(thisView.$summaryEl);
 
     var d3Svg = d3.select(thisView.el).append("svg:svg");
     thisView.d3Svg = d3Svg;
@@ -119,7 +127,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       .attr('d', 'M0,-5L10,0L0,5');
 
     thisView.d3SvgG = thisView.d3Svg.append("g")
-      .classed(pvt.consts.graphClass, true);
+      .classed(consts.graphClass, true);
 
     var d3SvgG = thisView.d3SvgG;
 
@@ -153,7 +161,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3.select("#" + gId).classed(classVal, true);
     }
   };
-
 
   // from http://bl.ocks.org/mbostock/3916621
   pvt.pathTween = function (d1, precision) {
@@ -457,8 +464,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3.select("#optimize").on("click", function(){thisView.optimizeGraphPlacement.call(thisView, true);});
 
       // TODO move to appropriate subclass since appRouter isn't used here
+      // TODO use a settings object to store settings
       if (inp !== undefined){
         thisView.appRouter = inp.appRouter;
+        thisView.includeShortestDep = inp.includeShortestDep;
       }
       thisView.postinitialize();
     },
@@ -557,6 +566,14 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           // call post render function for edge
           thisView.postRenderEdge.call(thisView, d, d3.select(this));
         });
+
+      newPathsG.on("mouseover", function(d) {
+          thisView.pathMouseOver.call(thisView, d, this);
+        })
+        .on("mouseout", function(d) {
+          thisView.pathMouseOut.call(thisView, d, this);
+        });
+
 
       // call subview function
       thisView.handleNewPaths(newPathsG);
@@ -667,7 +684,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3El.select("." + consts.wispGClass).remove();
       d3El.select("." + consts.longEdgeClass).classed(consts.longEdgeClass, false);
       var thisView = this;
-      if (thisView.doClipEdge(d) && !thisView.scopeNode) {
+      if (!thisView.scopeNode && thisView.doClipEdge(d)) {
         pvt.handleLongPaths(d, d3El);
       }
 
@@ -789,7 +806,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
                   curScale = (hasScope || thisView.model.getNodes().length < 10) ? (dScale > 1 ? dScale : 1) : (dScale < 0.9 ? dScale : .6), //dzoom.scale(),
                   wx = svgBCR.width,
                   wy = svgBCR.height,
-                  dispFract = d.get("dependencies").length ? (d.get("outlinks").length ? 0.5 : 4/5) : (1/5),
+                  dispFract = d.get("dependencies").length ? (d.get("outlinks").length ? 0.5 : 3/5) : (2/5),
                   nextY = wy*dispFract - d.get("y")*curScale - pvt.consts.nodeRadius*curScale/2,
                   nextX = wx/2 - d.get("x")*curScale;
               dzoom.translate([nextX, nextY]);
@@ -909,9 +926,25 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     },
 
     /**
+     * Removevisual mouse over properties to the paths
+     */
+    pathMouseOver: function (d, pathEl) {
+      var thisView = this;
+      thisView.showEdgeSummary(d);
+    },
+
+    /**
+     * Add visual mouse over properties to the paths
+     */
+    pathMouseOut: function (d, pathEl) {
+      var thisView = this;
+      thisView.hideSummary();
+    },
+
+    /**
      * Add visual mouse over properties to the explore nodes
      */
-    circleMouseOver: function(d, nodeEl) {
+    circleMouseOver: function (d, nodeEl) {
       var thisView = this,
           consts = pvt.consts,
           hoveredClass = consts.hoveredClass,
@@ -928,6 +961,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // add the appropriate class
       d3node.classed(hoveredClass, true);
+
+      // show summary text
+      thisView.showNodeSummary(d);
 
       // show/emphasize connecting edges
       d.get("outlinks").each(function (ol) {
@@ -950,14 +986,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         }
       });
 
-      // TODO find a different way to present summaries on mouse over (e.g. with a button click)
-      // // add node summary if not already present
-      // if (thisView.summaryTOKillList.hasOwnProperty(nodeId)){
-      //   window.clearInterval(thisView.summaryTOKillList[nodeId]);
-      //   delete thisView.summaryTOKillList[nodeId];
-      // }
-      // thisView.attachNodeSummary(d, d3node);
-
       thisView.postCircleMouseOver(d, nodeEl);
       return 0;
     },
@@ -974,6 +1002,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       if (!relTarget || $.contains(nodeEl, relTarget) || (relTarget.id && relTarget.id.match(nodeEl.id))){
         return;
       }
+
+      thisView.hideSummary();
 
       var d3node = d3.select(nodeEl),
           summId = pvt.getSummaryIdForDivWrap.call(thisView, d3node),
@@ -1001,22 +1031,22 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       });
 
-      if(thisView.summaryTOStartList.hasOwnProperty(nodeId)){
-        window.clearInterval(thisView.summaryTOStartList[nodeId]);
-        delete thisView.summaryTOStartList[nodeId];
-        d3node.classed(hoveredClass, false);
-      }
-      else{
-        // wait a bit before removing the summary
-        thisView.summaryTOKillList[nodeId] = window.setTimeout(function(){
-          delete thisView.summaryTOKillList[nodeId];
-          if (thisView.summaryDisplays[summId] && !thisView.summaryDisplays[summId].$wrapDiv.hasClass(hoveredClass)){
-            d3.select("#" + summId).remove(); // use d3 remove for x-browser support
-            delete thisView.summaryDisplays[summId];
-            d3node.classed(hoveredClass, false);
-          }
-        }, consts.summaryHideDelay);
-      }
+      // if(thisView.summaryTOStartList.hasOwnProperty(nodeId)){
+      //   window.clearInterval(thisView.summaryTOStartList[nodeId]);
+      //   delete thisView.summaryTOStartList[nodeId];
+      //   d3node.classed(hoveredClass, false);
+      // }
+      // else{
+      //   // wait a bit before removing the summary
+      //   thisView.summaryTOKillList[nodeId] = window.setTimeout(function(){
+      //     delete thisView.summaryTOKillList[nodeId];
+      //     if (thisView.summaryDisplays[summId] && !thisView.summaryDisplays[summId].$wrapDiv.hasClass(hoveredClass)){
+      //       d3.select("#" + summId).remove(); // use d3 remove for x-browser support
+      //       delete thisView.summaryDisplays[summId];
+      //       d3node.classed(hoveredClass, false);
+      //     }
+      //   }, consts.summaryHideDelay);
+      // }
       thisView.postCircleMouseOut(d, nodeEl);
     },
 
@@ -1093,26 +1123,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       thisView.postCircleMouseUp();
       return true;
     },
-
-    // /**
-    //  * Helper function to attach the summary div and add an event listener  leaving the summary
-    //  */
-    // attachNodeSummary: function(d, d3node){
-    //   // display the node summary
-    //   var $wrapDiv = this.showNodeSummary(d, d3node);
-    //   var hoveredClass = pvt.consts.hoveredClass;
-
-    //   $wrapDiv.on("mouseenter", function(){
-    //     $(this).addClass(hoveredClass);
-    //   });
-    //   // add listener to node summary so mouseouts trigger mouseout on node
-    //   $wrapDiv.on("mouseleave", function(evt) {
-    //     $(this).removeClass(hoveredClass);
-    //     Utils.simulate(d3node.node(), "mouseout", {
-    //       relatedTarget: evt.relatedTarget
-    //     });
-    //   });
-    // },
 
     /**
      * Handle mouseup event on svg
@@ -1222,8 +1232,15 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      *
      */
     doClipEdge: function(edge) {
-      var thisView = this;
-      return !(thisView.isEdgeShortestOutlink(edge) || thisView.isEdgeLengthBelowThresh(edge));
+      var thisView = this,
+          clipEdge = true;
+      if (thisView.isEdgeShortest(edge, "outlink") || thisView.isEdgeLengthBelowThresh(edge) || (thisView.includeShortestDep && thisView.isEdgeShortest(edge, "dep"))) {
+        clipEdge = false;
+      } // else if (thisView.useTopoEdges && (thisView.model.isEdgeInTopoSort(edge) || thisView.isEdgeLengthBelowThresh(edge))) {
+      //   clipEdge = false;
+      // }
+
+      return clipEdge;
     },
 
     /**
@@ -1253,26 +1270,50 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     },
 
     /**
-     * Detect if the given edge is the shortest outlink from the source node
+     * Detect if the given edge is the shortest outlink/dep
+     *
+     * @param edge - the input edge
+     * @param type - {"outlink", "dep"} (is edge shortest outlink/dep?)
+     * @return {boolean} - true if the edge is the shortest type (outlink/dep)
      */
-    isEdgeShortestOutlink: function (edge) {
+    isEdgeShortest: function (edge, type) {
       var thisView = this,
-          source = edge.get("source"),
-          srcX = source.get("x"),
-          srcY = source.get("y"),
+          isTypeOutlink = type === "outlink",
+          getNodeType = isTypeOutlink ? "source" : "target",
+          otherNodeType = isTypeOutlink ? "target" : "source",
+          node = edge.get(getNodeType),
+          nodeX = node.get("x"),
+          nodeY = node.get("y"),
           curMinSqDist = Number.MAX_VALUE,
           distSq,
-          tar,
+          relNode,
           minId;
-      source.get("outlinks").each(function (ol) {
-        tar = ol.get("target"),
-        distSq = Math.pow(tar.get("x") - srcX, 2) + Math.pow(tar.get("y") - srcY, 2);
-        if (distSq <= curMinSqDist && !thisView.isEdgeVisiblyTransitive(ol)){
-          minId = tar.id;
+      node.get(isTypeOutlink ? "outlinks" : "dependencies").each(function (edge) {
+        relNode = edge.get(otherNodeType),
+        distSq = Math.pow(relNode.get("x") - nodeX, 2) + Math.pow(relNode.get("y") - nodeY, 2);
+        if (distSq <= curMinSqDist && !thisView.isEdgeVisiblyTransitive(edge)){
+          minId = relNode.id;
           curMinSqDist = distSq;
         }
       });
-      return minId === edge.get("target").id;
+      return minId === edge.get(otherNodeType).id;
+    },
+
+    showEdgeSummary: function (d) {
+      var thisView = this;
+      thisView.$summaryEl.html("<h1>" + d.get("source").get("title") + " &rarr; " +  d.get("target").get("title") + "</h1>\n" +  (d.get("reason") || "-no reason given-"));
+      thisView.$summaryEl.fadeIn(pvt.consts.summaryTransTime);
+    },
+
+    showNodeSummary: function (d) {
+      var thisView = this;
+      thisView.$summaryEl.html("<h1>" + d.get("title") + "</h1>\n" + (d.get("summary") || "-no summary-"));
+      thisView.$summaryEl.fadeIn(pvt.consts.summaryTransTime);
+    },
+
+    hideSummary: function (d) {
+      var thisView = this;
+      thisView.$summaryEl.hide();
     },
 
     /**

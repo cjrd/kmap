@@ -4,7 +4,7 @@
 require(["main"], function(KMap){
   // create the model and pass it into the views
   var graphModel = new KMap.GraphModel(),
-      graphView = new KMap.GraphView({model: graphModel}),
+      graphView = new KMap.GraphView({model: graphModel, includeShortestDep: true}),
       graphListView = new KMap.GraphListView({model: graphModel});
 
   // fetch some graph data
@@ -27,7 +27,6 @@ require(["main"], function(KMap){
     });
 
   // add the data to the graph model
-
 
   // render the views and insert them in a desired location
 

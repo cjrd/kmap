@@ -26,8 +26,10 @@ define(["backbone", "underscore"], function (Backbone, _) {
       // TODO handle click event correctly
       events: {
         "click": function(evt){
-          var thisView = this;
-          thisView.model.trigger("setFocusNode", thisView.model.id);
+          var thisView = this,
+              modelId = thisView.model.id;
+          thisView.parentView.changeSelectedTitle(modelId);
+          thisView.model.trigger("setFocusNode", modelId);
         }
       },
 
