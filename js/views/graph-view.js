@@ -468,6 +468,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       if (inp !== undefined){
         thisView.appRouter = inp.appRouter;
         thisView.includeShortestDep = inp.includeShortestDep;
+        thisView.includeShortestOutlink = inp.includeShortestOutlink;
       }
       thisView.postinitialize();
     },
@@ -803,10 +804,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
               var dzoom = thisView.dzoom,
                   dScale = dzoom.scale(),
                   svgBCR = thisView.d3Svg.node().parentElement.getBoundingClientRect(), // assumes the parent element wraps the intended width/height (firefox hack)
-                  curScale = (hasScope || thisView.model.getNodes().length < 10) ? (dScale > 1 ? dScale : 1) : (dScale < 0.9 ? dScale : .6), //dzoom.scale(),
+                  curScale = (hasScope || thisView.model.getNodes().length < 8) ? (dScale > 1 ? dScale : 1) : (dScale < 0.9 ? dScale : .6), //dzoom.scale(),
                   wx = svgBCR.width,
                   wy = svgBCR.height,
-                  dispFract = d.get("dependencies").length ? (d.get("outlinks").length ? 0.5 : 3/5) : (2/5),
+                  dispFract = d.get("dependencies").length ? (d.get("outlinks").length ? 0.5 : 3.8/5) : (1.2/5),
                   nextY = wy*dispFract - d.get("y")*curScale - pvt.consts.nodeRadius*curScale/2,
                   nextX = wx/2 - d.get("x")*curScale;
               dzoom.translate([nextX, nextY]);
@@ -1028,25 +1029,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         d3.select("#" + consts.circleGIdPrefix + dep.get("source").id)
           .select("circle")
           .classed(consts.depCircleClass, false);
-
       });
-
-      // if(thisView.summaryTOStartList.hasOwnProperty(nodeId)){
-      //   window.clearInterval(thisView.summaryTOStartList[nodeId]);
-      //   delete thisView.summaryTOStartList[nodeId];
-      //   d3node.classed(hoveredClass, false);
-      // }
-      // else{
-      //   // wait a bit before removing the summary
-      //   thisView.summaryTOKillList[nodeId] = window.setTimeout(function(){
-      //     delete thisView.summaryTOKillList[nodeId];
-      //     if (thisView.summaryDisplays[summId] && !thisView.summaryDisplays[summId].$wrapDiv.hasClass(hoveredClass)){
-      //       d3.select("#" + summId).remove(); // use d3 remove for x-browser support
-      //       delete thisView.summaryDisplays[summId];
-      //       d3node.classed(hoveredClass, false);
-      //     }
-      //   }, consts.summaryHideDelay);
-      // }
       thisView.postCircleMouseOut(d, nodeEl);
     },
 
@@ -1234,7 +1217,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     doClipEdge: function(edge) {
       var thisView = this,
           clipEdge = true;
-      if (thisView.isEdgeShortest(edge, "outlink") || thisView.isEdgeLengthBelowThresh(edge) || (thisView.includeShortestDep && thisView.isEdgeShortest(edge, "dep"))) {
+      if ((thisView.includeShortestOutlink && thisView.isEdgeShortest(edge, "outlink")) || thisView.isEdgeLengthBelowThresh(edge) || (thisView.includeShortestDep && thisView.isEdgeShortest(edge, "dep"))) {
         clipEdge = false;
       } // else if (thisView.useTopoEdges && (thisView.model.isEdgeInTopoSort(edge) || thisView.isEdgeLengthBelowThresh(edge))) {
       //   clipEdge = false;

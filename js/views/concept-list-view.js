@@ -92,12 +92,6 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
 
         thisView.postrender();
 
-        var $wrap = thisView.$el.find("#" + consts.wrapperId);
-        $wrap.height($(window).height());
-        $(window).resize(function () {
-          $wrap.height($(window).height());
-        });
-
         thisView.isRendered = true;
         return thisView;
       },
@@ -106,6 +100,14 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
       postrender: function () {
         var thisView = this;
         thisView.$el.find("#" + pvt.consts.olId).append(thisView.$list);
+        // TODO this assumes the list takes up the entire screen
+        var $wrap = thisView.$el.find("#" + pvt.consts.wrapperId);
+        $wrap.height($(window).height());
+        $(window).resize(function () {
+          $wrap.height($(window).height());
+        });
+
+
       },
 
       /**

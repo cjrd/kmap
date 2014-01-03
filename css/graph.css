@@ -12,6 +12,9 @@
 
 #graph-summary-el{
     z-index: 10;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
     bottom: 0;
     position: absolute;
     text-align: center;
@@ -21,7 +24,7 @@
     border: 1px solid #333;
     border-radius: 5px 5px 0 0;
     left: 1em;
-    padding: 0.5em;
+    padding: 0.8em;
     right: 1em;
     line-height: 1.3em;
     display: none;
@@ -191,4 +194,11 @@ path.link-wrapper:hover{
 
 .scoped .link-wrapper-hover path.link-wrapper{
     opacity: 0;
+}
+
+
+@media only screen and (max-width: 350px){
+    #graph-summary-el{
+        opacity: 0;
+    }
 }
