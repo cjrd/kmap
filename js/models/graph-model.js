@@ -67,6 +67,9 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
       // add edges
       tmpEdges.forEach(function(edge){
+      if (edge.source === "recognizing-triangles" && edge.target === "classifying-shapes-by-line-and-angle-types"){
+        var x =5;
+      }
         thisGraph.addEdge.call(thisGraph, edge);
       });
 
@@ -172,6 +175,11 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
       if (!edge.source  || !edge.target) {
         throw new Error("source or target was not given correctly for input or does not exist in graph");
+      }
+
+      if (edge.source.id === edge.target.id){
+        console.log("warning: loop edge detected and not added to graph, node: " + edge.source.id);
+        return;
       }
 
       if (edge.id === undefined) {
