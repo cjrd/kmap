@@ -49,13 +49,6 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
       postinitialize: function (inp) {
         var thisView = this;
         thisView.ListItem = ConceptListItem;
-
-        // allows correct list scrolling when the window size changes
-        var $wrap = thisView.$el.find("#" + pvt.consts.wrapperId);
-        $wrap.height($(window).height());
-        $(window).resize(function () {
-          $wrap.height($(window).height());
-        });
       },
 
       /** override in subclass */
@@ -107,6 +100,12 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
       postrender: function () {
         var thisView = this;
         thisView.$el.find("#" + pvt.consts.olId).append(thisView.$list);
+        // allows correct list scrolling when the window size changes
+        var $wrap = thisView.$el.find("#" + pvt.consts.wrapperId);
+        $wrap.height($(window).height());
+        $(window).resize(function () {
+          $wrap.height($(window).height());
+        });
       },
 
       /**

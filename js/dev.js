@@ -19,6 +19,7 @@ require(["main"], function(KMap){
 
       // render the views
       graphView.render();
+      graphView.centerForNode(graphModel.getNode("F-62"));
       graphListView.render();
 
       // insert them into the html
