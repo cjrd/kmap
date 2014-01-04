@@ -67,9 +67,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
       // add edges
       tmpEdges.forEach(function(edge){
-      if (edge.source === "recognizing-triangles" && edge.target === "classifying-shapes-by-line-and-angle-types"){
-        var x =5;
-      }
         thisGraph.addEdge.call(thisGraph, edge);
       });
 
@@ -168,14 +165,17 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      * @param {edge object} edge: the edge to be added to the model
      */
     addEdge: function(edge) {
-      var thisGraph = this;
+      var thisGraph = this,
       // check if source/target are ids and switch to nodes if necessary
-      edge.source =  edge.source instanceof thisGraph.nodeModel ? edge.source : this.getNode(edge.source);
-      edge.target = edge.target instanceof thisGraph.nodeModel ? edge.target : this.getNode(edge.target);
+      source =  edge.source instanceof thisGraph.nodeModel ? edge.source : this.getNode(edge.source),
+      target = edge.target instanceof thisGraph.nodeModel ? edge.target : this.getNode(edge.target);
 
-      if (!edge.source  || !edge.target) {
-        throw new Error("source or target was not given correctly for input or does not exist in graph");
+      if (!source  || !target) {
+        throw new Error("source or target was not given correctly for input or does not exist in graph: " + edge.source + " -> " + edge.target );
       }
+
+      edge.source = source;
+      edge.target = target;
 
       if (edge.source.id === edge.target.id){
         console.log("warning: loop edge detected and not added to graph, node: " + edge.source.id);
