@@ -1485,10 +1485,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           curScale = dzoom.scale(),
           step = consts.panStep,
           trans = {
-            "up": [0, -step],
-            "down": [0, step],
-            "left": [-step, 0],
-            "right": [step, 0]
+            "up": [0, step],
+            "down": [0, -step],
+            "left": [step, 0],
+            "right": [-step, 0]
             }[dir];
 
       // internally change the translation
@@ -1542,10 +1542,12 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           keyCode = d3.event.keyCode;
       switch (keyCode) {
       case 187:
+      case 61:
         // plus sign: zoom in
         thisView.zoomInGraph();
         break;
       case 189 :
+      case 173:
         // minus sign: zoom out
         thisView.zoomOutGraph();
         break;
