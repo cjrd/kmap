@@ -48,6 +48,44 @@
     font-style: italic;
 }
 
+/* Zoom In / Zoom Out */
+#graph-zoom-div{
+    position: absolute;
+    z-index: 10;
+    top: 1.5em;
+    right: 1.5em;
+    border: 1px solid #8A8484;
+    border-radius: 5px;
+    padding: 0;
+    margin: 0;
+    background: white;
+    overflow: hidden;
+}
+
+.graph-zoom-in-button, .graph-zoom-out-button{
+    display: block;
+    font-size: 1.2em;
+    padding: 3px;
+    margin: 0;
+    width: 1.4em;
+    line-height: 1.2em;
+    border: none;
+    text-align: center;
+    background: inherit;
+    cursor: pointer;
+    color: #8A8484;
+    outline: none;
+}
+
+.graph-zoom-in-button{
+    border-bottom: 1px solid;
+}
+
+.graph-zoom-in-button:hover, .graph-zoom-out-button:hover{
+    color: #333;
+    font-weight: bold;
+}
+
 /* Concept Gs */
 .concept-g{
     cursor: default;

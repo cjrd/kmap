@@ -42,9 +42,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     numWispPts: 10,
     wispLen: 80,
     edgeLenThresh: 285, // threshold length of edges to be shown by default
+    scaleFactor: 1.5,
+    scaleTransTime: 250,
+    panTransTime: 250,
+    panStep: 75,
 
     graphClass: "graph",
     viewId: "graph-view",
+    zoomBoxId: "graph-zoom-div",
+    zoomOutClass: "graph-zoom-out-button",
+    zoomInClass: "graph-zoom-in-button",
     summaryElId: "graph-summary-el",
     hoveredClass: "hovered",
     pathWrapClass: "link-wrapper",
@@ -135,7 +142,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     thisView.gPaths = d3SvgG.append("g").selectAll("g");
     thisView.gCircles = d3SvgG.append("g").selectAll("g");
 
-    // listen for svg events
     // listen for mouse events on svg
     thisView.d3Svg.on("mouseup", function(){
       thisView.svgMouseUp.apply(thisView, arguments);
@@ -143,12 +149,59 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
     // apply zoom (can be overridden in subclass)
     thisView.setupZoomTransListeners.call(thisView);
+
+    // show zoom buttons
+    var $zoomBoxDiv = $(document.createElement("div")),
+        $zoomOutButton = $(document.createElement("button")),
+        $zoomInButton = $(document.createElement("button"));
+    $zoomBoxDiv.attr("id", consts.zoomBoxId);
+    $zoomOutButton.addClass(consts.zoomOutClass);
+    $zoomOutButton.html("-");
+    $zoomInButton.addClass(consts.zoomInClass);
+    $zoomInButton.html("+");
+
+    $zoomBoxDiv.append($zoomInButton);
+    $zoomBoxDiv.append($zoomOutButton);
+    thisView.$el.append($zoomBoxDiv);
+  };
+
+  /**
+   * center-zoom the svgG element
+   * type {"in", "out"}
+   */
+  pvt.centerZoomSvgG = function (type) {
+    var thisView = this,
+        consts = pvt.consts,
+        zoomIn = type === "in",
+        dzoom = thisView.dzoom,
+        newTrans = dzoom.translate(),
+        svgBCR = thisView.d3Svg.node().parentElement.getBoundingClientRect(),
+        wx = svgBCR.width/2,
+        wy = svgBCR.height/2,
+        prevScale = dzoom.scale(),
+        newScale = zoomIn ? prevScale*consts.scaleFactor
+          : prevScale/consts.scaleFactor,
+        scaleRatio = newScale/prevScale;
+    dzoom.scale(newScale);
+
+    newTrans[0] = wx - (wx - newTrans[0])*scaleRatio;
+    newTrans[1] =  wy - (wy - newTrans[1])*scaleRatio;
+
+    dzoom.translate(newTrans);
+    thisView.d3SvgG.transition()
+      .duration(consts.scaleTransTime)
+      .ease("linear")
+      .attr("transform", function () {
+        return "translate(" + dzoom.translate() + ")"
+          + "scale(" + dzoom.scale() + ")";
+      });
+
+    thisView.hideSummary();
   };
 
   /**
    * Change the scope node classes for the corresponding g elements
    */
-
   pvt.changeNodeClasses = function (prevD, nextD, classVal) {
     var thisView = this,
         gId;
@@ -406,10 +459,14 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     return {source: {x: srcX + offX, y: srcY + offY}, target: {x: tgtX - offX, y: tgtY - offY}};
   };
 
-
   return Backbone.View.extend({
 
     id: pvt.consts.viewId,
+
+    events: {
+      "click .graph-zoom-out-button": "zoomOutGraph",
+      "click .graph-zoom-in-button": "zoomInGraph"
+    },
 
     /**
      * Initialize function
@@ -442,7 +499,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         thisView.centerForNode(inpNode);
       });
 
-
       // set instance variables -- can overwrite in subclasses
       thisView.pathTransTime = 500;
       // transition time for moving paths when optimizing graph
@@ -470,6 +526,15 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         thisView.includeShortestDep = inp.includeShortestDep;
         thisView.includeShortestOutlink = inp.includeShortestOutlink;
       }
+
+      // setup d3 window listeners
+      d3.select(window).on("keydown",  function(){
+        thisView.windowKeyDown.call(thisView);
+      });
+      d3.select(window).on("keyup",  function(){
+        thisView.windowKeyUp.call(thisView);
+      });
+
       thisView.postinitialize();
     },
 
@@ -1403,6 +1468,44 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         }
       };
     })(),
+
+    zoomOutGraph: function () {
+      pvt.centerZoomSvgG.call(this, "out");
+    },
+
+    zoomInGraph: function () {
+      pvt.centerZoomSvgG.call(this, "in");
+    },
+
+    panGraph: function(dir) {
+      var thisView = this,
+          consts = pvt.consts,
+          dzoom = thisView.dzoom,
+          newTrans = dzoom.translate(),
+          curScale = dzoom.scale(),
+          step = consts.panStep,
+          trans = {
+            "up": [0, -step],
+            "down": [0, step],
+            "left": [-step, 0],
+            "right": [step, 0]
+            }[dir];
+
+      // internally change the translation
+      newTrans[0] = trans[0] + newTrans[0];
+      newTrans[1] = trans[1] + newTrans[1];
+      dzoom.translate(newTrans);
+
+      // externally change the tranlation
+      thisView.d3SvgG.transition()
+        .ease("linear")
+        .duration(consts.panTransTime)
+        .attr("transform", function () {
+          return "translate(" + dzoom.translate() + ")"
+            + "scale(" + dzoom.scale() + ")";
+        });
+    },
+
     //********************
     // "ABSTRACT" METHODS
     //*******************
@@ -1432,8 +1535,42 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     postinitialize: function() {},
 
     // override in subclass
-    windowKeyDown: function() {},
-    windowKeyUp: function() {},
+    windowKeyDown: function(evt) {
+      if (document.activeElement !== document.body) return;
+
+      var thisView = this,
+          keyCode = d3.event.keyCode;
+      switch (keyCode) {
+      case 187:
+        // plus sign: zoom in
+        thisView.zoomInGraph();
+        break;
+      case 189 :
+        // minus sign: zoom out
+        thisView.zoomOutGraph();
+        break;
+      case 37:
+        // left arrow: pan left
+        thisView.panGraph("left");
+        break;
+      case 39:
+        // right arrow: pan right
+        thisView.panGraph("right");
+        break;
+      case 38:
+        // up arrow: pan up
+        thisView.panGraph("up");
+        break;
+      case 40:
+        // down arrow: pan down
+        thisView.panGraph("down");
+        break;
+
+      }
+    },
+    windowKeyUp: function(evt) {
+
+    },
     handleNewPaths: function() {},
     handleNewCircles: function () {},
     firstRender: function (){},
