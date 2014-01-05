@@ -1,5 +1,6 @@
 /* main container */
 #graph-view{
+    overflow: hidden;
     position: relative;
     height: inherit;
     width: inherit;
