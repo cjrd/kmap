@@ -20,7 +20,7 @@
     border-right: 1px solid #CCCCCC;
 }
 
-#concept-list-wrapper h1{
+#concept-list-wrapper h1, #concept-title-header h1{
     text-align: center;
     font-weight: bold;
     color: #333;
@@ -149,7 +149,7 @@
     cursor: default;
 }
 
-.hide-clist #concept-list-wrapper{
+.hide-clist #concept-list-wrapper, .hide-clist #concept-title-header{
     display: none;
 }
 
@@ -173,10 +173,10 @@
 
 
 @media only screen and  (max-width: 760px){
-    #concept-list-wrapper{
+    #concept-list-wrapper, #concept-title-header{
         display: none;
     }
-    .show-clist #concept-list-wrapper{
+    .show-clist #concept-list-wrapper, .show-clist #concept-title-header{
         display: block;
     }
 
@@ -184,7 +184,7 @@
         display: none;
     }
 
-    .hide-clist #concept-list-wrapper{
+    .hide-clist #concept-list-wrapper, .hide-clist #concept-title-header{
         display: none;
     }
 
@@ -206,7 +206,7 @@
         padding: 0 0.2em;
     }
 
-    #concept-list-wrapper{
+    #concept-list-wrapper, #concept-title-header{
         display: none;
     }
 }
