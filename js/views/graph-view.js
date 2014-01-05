@@ -1295,7 +1295,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      * include the given edge in the optimization placement?
      */
     includeEdgeInOpt: function (edge) {
-      return !edge.get("isContracted") && !edge.get("isTransitive");
+      var thisView = this;
+      return thisView.isEdgeVisible(edge);
     },
 
     /**

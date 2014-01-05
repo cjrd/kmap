@@ -40,6 +40,47 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
     },
 
     /**
+     * Make/extend this graph from a json object, but terminating at leaf node with id leafId
+     */
+    addJsonSubGraphToGraph: function (jsonNodeArr, leafId) {
+      // create an id to node obj for DFS:
+      var thisGraph = this,
+          idObj = {},
+          i;
+
+      i = jsonNodeArr.length;
+      while( i -- ){
+        idObj[jsonNodeArr[i].id] = jsonNodeArr[i];
+      }
+
+      if (!idObj.hasOwnProperty(leafId)) {
+        throw new Error("input node array does not have node with id: " + leafId);
+      }
+
+      var subgraph = [],
+          visitedNodeIds = {},
+          curDepSrc;
+
+      // recursively add the nodes to the graph
+      dfsVisitNodes(idObj[leafId]);
+
+      function dfsVisitNodes (node) {
+        var depLen= node.dependencies.length;
+        subgraph.push(node);
+        visitedNodeIds[node.id] = 1;
+        while( depLen -- ){
+          curDepSrc = node.dependencies[depLen].source;
+          if (!visitedNodeIds.hasOwnProperty(curDepSrc)) {
+            dfsVisitNodes(idObj[curDepSrc]);
+          }
+        }
+      }
+
+      // add the subgraph to the graph
+      thisGraph.addJsonNodesToGraph(subgraph);
+    },
+
+    /**
      * Make/extend this graph from a json obj
      *
      * @param {json object} jsonObj: json string with attribute:
@@ -72,7 +113,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
       return this;
     },
-
 
     /**
      * @return <boolean> true if the graph is populated
@@ -308,17 +348,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
           curNode = nodes.get(curLeafNodeTag);
 
           if (!traversedNodes.hasOwnProperty(curLeafNodeTag)) {
-          // && curNode.get("dependencies").every(function (dep) {
-          //     return traversedNodes.hasOwnProperty(dep.get("source").id);
-          //   })
-          // ){
-            // if (prevLeafTag) {
-            //   // mark edges in topological sort edges
-            //   var topoEdge = curNode.get("dependencies").filter(function (fedge) {
-            //       return fedge.get("source").id === prevLeafTag;
-            //   })[0];
-            //   topoEdge.isTopoEdge = true;
-            // }
             directDeps = curNode.getDirectDeps();
             traversedNodes[curLeafNodeTag] = 1;
             if (directDeps.length > 0){
@@ -334,6 +363,32 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       };
     },
 
+    // /**
+    //  * Contract all nodes that are not part of the dep graph for the input node id
+    //  */
+    // showSubgraphFromNodeId: function (nodeId) {
+    //   var thisGraph = this;
+    //   thisGraph.expandGraph();
+    //   var visNodes = {};
+    //   var traceDepGraph = function traceDepGraph(node) {
+    //     visNodes[node.id] = 1;
+    //     node.get("dependencies").each(function (dep) {
+    //       var nextNode = dep.get("source");
+    //       if (!visNodes.hasOwnProperty(nextNode.id)) {
+    //         traceDepGraph(nextNode);
+    //       }
+    //     });
+    //   };
+
+    //   traceDepGraph(thisGraph.getNode(nodeId));
+
+    //   thisGraph.getNodes().each(function (node) {
+    //     if (!visNodes.hasOwnProperty(node.id)) {
+    //       node.set("isContracted", true);
+    //     }
+    //   });
+    // },
+
     expandGraph: function () {
       var thisGraph = this;
       thisGraph.getEdges().each(function (edge) {
@@ -347,6 +402,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
     /**
      * Check if the input edge is present in the topological sort
+     * (sheel function - not currently working)
      */
     isEdgeInTopoSort: function(edge){
       var thisGraph = this;
