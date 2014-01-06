@@ -200,7 +200,7 @@ path.link-wrapper:hover{
     fill: #F6FBFF; /* light shade of alice blue see http://encycolorpedia.com/f6fbff for color scheme */
 }
 
-.concept-g.scoped-circle-g circle, .concept-g.scoped-circle-g .dep-circle, .concept-g.scoped-circle-g .ol-circle, .concept-g.focused-circle-g circle{
+g.concept-g.scoped-circle-g > circle, g.concept-g.scoped-circle-g .dep-circle, g.concept-g.scoped-circle-g .ol-circle, g.concept-g.focused-circle-g > circle{
     fill: rgb(255, 244, 253);
 }
 
