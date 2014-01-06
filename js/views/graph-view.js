@@ -484,6 +484,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         doPathsTrans: false
       };
 
+      thisView.settings = {};
+
       // onhover/click summary displays
       // TODO reimplement these with both edges and nodes
       thisView.summaryDisplays = {};
@@ -521,12 +523,14 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // TODO move to appropriate subclass since appRouter isn't used here
       // TODO use a settings object to store settings
+      var settings = {};
       if (inp !== undefined){
         thisView.appRouter = inp.appRouter;
-        thisView.includeShortestDep = inp.includeShortestDep;
-        thisView.includeShortestOutlink = inp.includeShortestOutlink;
+        settings.includeShortestDep = inp.includeShortestDep;
+        settings.includeShortestOutlink = inp.includeShortestOutlink;
+        settings.useWisps = inp.useWisps === undefined ? true : inp.useWisps;
       }
-
+      thisView.settings = settings;
       // setup d3 window listeners
       d3.select(window).on("keydown",  function(){
         thisView.windowKeyDown.call(thisView);
@@ -750,7 +754,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3El.select("." + consts.wispGClass).remove();
       d3El.select("." + consts.longEdgeClass).classed(consts.longEdgeClass, false);
       var thisView = this;
-      if (!thisView.scopeNode && thisView.doClipEdge(d)) {
+      if (!thisView.scopeNode && thisView.settings.useWisps && thisView.doClipEdge(d)) {
         pvt.handleLongPaths(d, d3El);
       }
 
@@ -1281,13 +1285,11 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      */
     doClipEdge: function(edge) {
       var thisView = this,
-          clipEdge = true;
-      if ((thisView.includeShortestOutlink && thisView.isEdgeShortest(edge, "outlink")) || thisView.isEdgeLengthBelowThresh(edge) || (thisView.includeShortestDep && thisView.isEdgeShortest(edge, "dep"))) {
+          clipEdge = true,
+          settings = thisView.settings;
+      if ((settings.includeShortestOutlink && thisView.isEdgeShortest(edge, "outlink")) || thisView.isEdgeLengthBelowThresh(edge) || (settings.includeShortestDep && thisView.isEdgeShortest(edge, "dep"))) {
         clipEdge = false;
-      } // else if (thisView.useTopoEdges && (thisView.model.isEdgeInTopoSort(edge) || thisView.isEdgeLengthBelowThresh(edge))) {
-      //   clipEdge = false;
-      // }
-
+      }
       return clipEdge;
     },
 
