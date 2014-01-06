@@ -6,8 +6,8 @@
     width: inherit;
 }
 
-#graph-view svg{
-    height: 100%;
+svg{
+    height: inherit;
     width: 100%;
 }
 

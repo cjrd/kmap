@@ -23,17 +23,16 @@ require(["main"], function(KMap){
     $("body").prepend(graphListView.$el);
     $("#graph-view-wrapper").append(graphView.$el);
 
-    // center on a leaf element
-    var topoSortList = graphModel.getTopoSort();
-    graphView.centerForNode(graphModel.getNode(topoSortList[topoSortList.length -1]));
-
-
     // TODO integrate this into the view
     var $wrap = $(document.body);
     $wrap.height($(window).height());
     $(window).resize(function () {
       $wrap.height($(window).height());
     });
+
+    // center on a leaf element
+    var topoSortList = graphModel.getTopoSort();
+    graphView.centerForNode(graphModel.getNode(topoSortList[topoSortList.length -1]));
 
   };
 
