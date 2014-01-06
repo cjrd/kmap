@@ -78,7 +78,8 @@
     width: 20%;
     min-width: 200px;
     height: 5em;
-    border: 1px #333333 solid;
+    border: 1px #8B8383 solid;
+    border-top: none;
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
