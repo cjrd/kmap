@@ -17,12 +17,24 @@ require(["main"], function(KMap){
 
     // render the views
     graphView.render();
-    graphView.centerForNode(graphModel.getNode(graphModel.getTopoSort().shift()));
     graphListView.render();
 
     // insert them into the html
     $("body").prepend(graphListView.$el);
     $("#graph-view-wrapper").append(graphView.$el);
+
+    // center on a leaf element
+    var topoSortList = graphModel.getTopoSort();
+    graphView.centerForNode(graphModel.getNode(topoSortList[topoSortList.length -1]));
+
+
+    // TODO integrate this into the view
+    var $wrap = $(document.body);
+    $wrap.height($(window).height());
+    $(window).resize(function () {
+      $wrap.height($(window).height());
+    });
+
   };
 
   // fetch some graph data (multiple fetches since demo_kmap is not stored in repo yet
