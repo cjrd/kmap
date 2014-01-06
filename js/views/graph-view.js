@@ -1351,13 +1351,13 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     showEdgeSummary: function (d) {
       var thisView = this;
       thisView.$summaryEl.html("<h1>" + d.get("source").get("title") + " &rarr; " +  d.get("target").get("title") + "</h1>\n" +  (d.get("reason") || "-no reason given-"));
-      thisView.$summaryEl.fadeIn(pvt.consts.summaryTransTime);
+      thisView.$summaryEl.show();//fadeIn(pvt.consts.summaryTransTime);
     },
 
     showNodeSummary: function (d) {
       var thisView = this;
       thisView.$summaryEl.html("<h1>" + d.get("title") + "</h1>\n" + (d.get("summary") || "-no summary-"));
-      thisView.$summaryEl.fadeIn(pvt.consts.summaryTransTime);
+      thisView.$summaryEl.show();//fadeIn(pvt.consts.summaryTransTime);
     },
 
     hideSummary: function (d) {
