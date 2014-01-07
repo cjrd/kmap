@@ -66,7 +66,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     depCircleClass: "dep-circle",
     olCircleClass: "ol-circle",
     reduceNodeTitleClass: "reduce-node-title",
-    graphDirection: "TB", // BT TB LR RL TODO consider making an option for the user
+    defaultGraphDirection: "TB", // BT TB LR RL TODO consider making an option for the user
     wispGClass: "wispG",
     startWispPrefix: "startp-",
     endWispPrefix: "endp-",
@@ -484,8 +484,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         doPathsTrans: false
       };
 
-      thisView.settings = {};
-
       // onhover/click summary displays
       // TODO reimplement these with both edges and nodes
       thisView.summaryDisplays = {};
@@ -524,14 +522,13 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       // TODO move to appropriate subclass since appRouter isn't used here
       // TODO use a settings object to store settings
       var settings = {};
-      if (inp !== undefined){
-        thisView.appRouter = inp.appRouter;
-        settings.includeShortestDep = inp.includeShortestDep;
-        settings.includeShortestOutlink = inp.includeShortestOutlink;
-        settings.useWisps = inp.useWisps === undefined ? true : inp.useWisps;
-        settings.showEdgeSummary = inp.showEdgeSummary === undefined ? true : inp.showEdgeSummary;
-        settings.showNodeSummary = inp.showNodeSummary === undefined ? true : inp.showNodeSummary;
-      }
+        thisView.appRouter = inp && inp.appRouter;
+        settings.includeShortestDep = inp && inp.includeShortestDep;
+        settings.includeShortestOutlink = inp && inp.includeShortestOutlink;
+        settings.useWisps = (inp && inp.useWisps) === undefined ? true : inp.useWisps;
+        settings.showEdgeSummary = (inp && inp.showEdgeSummary) === undefined ? true : inp.showEdgeSummary;
+        settings.showNodeSummary = (inp && inp.showNodeSummary) === undefined ? true : inp.showNodeSummary;
+        settings.graphDirection =  (inp && inp.graphDirection) === undefined ? pvt.consts.defaultGraphDirection : inp.graphDirection;
       thisView.settings = settings;
       // setup d3 window listeners
       d3.select(window).on("keydown",  function(){
@@ -785,7 +782,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           nodeHeight = pvt.consts.nodeRadius,
           nodes = thisGraph.get("nodes"),
           edges = thisGraph.get("edges"),
-          lrOrder = pvt.consts.graphDirection.toLowerCase() === "lr",
+          lrOrder = thisView.settings.graphDirection.toLowerCase() === "lr",
           transX = 0,
           transY = 0;
 
@@ -812,7 +809,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var layout = dagre.layout()
             .rankSep(80)
             .nodeSep(120) // TODO move defaults to consts
-            .rankDir(pvt.consts.graphDirection).run(dagreGraph);
+            .rankDir(thisView.settings.graphDirection).run(dagreGraph);
 
       // determine average x and y movement
       if (noMoveNodeId === undefined && minSSDist) {

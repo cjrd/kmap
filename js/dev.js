@@ -4,7 +4,7 @@
 require(["main"], function(KMap){
   // create the model and pass it into the views
   var graphModel = new KMap.GraphModel(),
-      graphView = new KMap.GraphView({model: graphModel, includeShortestDep: true}),
+      graphView = new KMap.GraphView({model: graphModel, includeShortestDep: true, graphDirection: "TB"}),
       graphListView = new KMap.GraphListView({model: graphModel});
 
   var handleDataFun = function (data) {
