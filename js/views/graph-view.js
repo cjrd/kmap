@@ -529,6 +529,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         settings.includeShortestDep = inp.includeShortestDep;
         settings.includeShortestOutlink = inp.includeShortestOutlink;
         settings.useWisps = inp.useWisps === undefined ? true : inp.useWisps;
+        settings.showEdgeSummary = inp.showEdgeSummary === undefined ? true : inp.showEdgeSummary;
+        settings.showNodeSummary = inp.showNodeSummary === undefined ? true : inp.showNodeSummary;
       }
       thisView.settings = settings;
       // setup d3 window listeners
@@ -1000,7 +1002,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      */
     pathMouseOver: function (d, pathEl) {
       var thisView = this;
-      thisView.showEdgeSummary(d);
+      if (thisView.settings.showEdgeSummary) {
+        thisView.showEdgeSummary(d);
+      }
     },
 
     /**
@@ -1033,7 +1037,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3node.classed(hoveredClass, true);
 
       // show summary text
-      thisView.showNodeSummary(d);
+      if (thisView.settings.showNodeSummary) {
+        thisView.showNodeSummary(d);
+      }
 
       // show/emphasize connecting edges
       d.get("outlinks").each(function (ol) {
