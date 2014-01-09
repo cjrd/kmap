@@ -529,6 +529,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         settings.showEdgeSummary = (inp && inp.showEdgeSummary) === undefined ? true : inp.showEdgeSummary;
         settings.showNodeSummary = (inp && inp.showNodeSummary) === undefined ? true : inp.showNodeSummary;
         settings.graphDirection =  (inp && inp.graphDirection) === undefined ? pvt.consts.defaultGraphDirection : inp.graphDirection;
+      settings.showTransEdgesWisps = (inp && inp.showTransEdgesWisps) === undefined ? true : inp.showTransEdgesWisps;
       thisView.settings = settings;
       // setup d3 window listeners
       d3.select(window).on("keydown",  function(){
@@ -1309,7 +1310,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      */
     isEdgeVisiblyTransitive: function (edge) {
       var thisView = this;
-      return edge.get("isTransitive")
+      return !thisView.settings.showTransEdgesWisps && edge.get("isTransitive")
         && thisView.model.checkIfTransitive(edge, pvt.getEdgeVisibleNoTransFun.call(thisView));
     },
 
