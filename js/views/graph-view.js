@@ -66,7 +66,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     depCircleClass: "dep-circle",
     olCircleClass: "ol-circle",
     reduceNodeTitleClass: "reduce-node-title",
-    graphDirection: "TB", // BT TB LR RL TODO consider making an option for the user
+    defaultGraphDirection: "TB", // BT TB LR RL TODO consider making an option for the user
     wispGClass: "wispG",
     startWispPrefix: "startp-",
     endWispPrefix: "endp-",
@@ -215,6 +215,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     }
   };
 
+  /**
+   * Smooth path animation interpolation
+   */
   // from http://bl.ocks.org/mbostock/3916621
   pvt.pathTween = function (d1, precision) {
     return function() {
@@ -277,6 +280,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     };
   };
 
+  /**
+   * Add expand/contract icon to the nodes
+   */
   pvt.addECIcon = function(d, d3el, isDeps){
     var thisView = this,
         consts = pvt.consts,
@@ -371,7 +377,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       longPaths.classed(consts.longEdgeClass, true);
     }
 
-    // TODO remove hardcoding to consts
     wispsG = d3this.insert("g", ":first-child")
       .classed(consts.wispGClass, true);
     wispsG.append("path")
@@ -491,12 +496,36 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       thisView.summaryTOKillList = {};
       thisView.summaryTOStartList = {};
 
-      // TODO find a better way to communicate between views
+      // TODO find a better way to communicate between views w/out involving urls
       thisView.listenTo(thisView.model, "render", thisView.render);
+
+      // change/set focus node
       thisView.listenTo(thisView.model, "setFocusNode", function (id) {
+        if (thisView.state.isFocusing) {
+          return;
+        }
+        thisView.state.isFocusing = true;
         var inpNode = thisView.model.getNode(id);
-        thisView.setFocusNode(inpNode);
-        thisView.centerForNode(inpNode);
+        if (thisView.hasScope() && thisView.isNodeVisible(inpNode)){
+          // if node is visible and in scope mode, simply simulate a click event on the node
+          var el = document.getElementById(thisView.getCircleGId(inpNode));
+          thisView.simulate(el, "mousedown");
+          thisView.simulate(el, "mouseup");
+        } else if (!thisView.focusNode ||  thisView.focusNode.id !== inpNode.id){
+          // order matters - must set focus _after_ rendering
+          thisView.centerForNode(inpNode);
+          thisView.setFocusNode(inpNode);
+        }
+        thisView.state.isFocusing = false;
+      });
+
+      // change node scope
+      thisView.listenTo(thisView.model, "toggleNodeScope", function (id) {
+        // toggle node scope by simulating a mouse click on the node
+        var inpNode = thisView.model.getNode(id),
+            el = document.getElementById(thisView.getCircleGId(inpNode));
+        thisView.simulate(el, "mousedown");
+        thisView.simulate(el, "mouseup");
       });
 
       // set instance variables -- can overwrite in subclasses
@@ -521,12 +550,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // TODO move to appropriate subclass since appRouter isn't used here
       // TODO use a settings object to store settings
-      if (inp !== undefined){
-        thisView.appRouter = inp.appRouter;
-        thisView.includeShortestDep = inp.includeShortestDep;
-        thisView.includeShortestOutlink = inp.includeShortestOutlink;
-      }
-
+      var settings = {};
+        thisView.appRouter = inp && inp.appRouter;
+        settings.includeShortestDep = inp && inp.includeShortestDep;
+        settings.includeShortestOutlink = inp && inp.includeShortestOutlink;
+        settings.useWisps = (inp && inp.useWisps) === undefined ? true : inp.useWisps;
+        settings.showEdgeSummary = (inp && inp.showEdgeSummary) === undefined ? true : inp.showEdgeSummary;
+        settings.showNodeSummary = (inp && inp.showNodeSummary) === undefined ? true : inp.showNodeSummary;
+        settings.graphDirection =  (inp && inp.graphDirection) === undefined ? pvt.consts.defaultGraphDirection : inp.graphDirection;
+      settings.showTransEdgesWisps = (inp && inp.showTransEdgesWisps) === undefined ? true : inp.showTransEdgesWisps;
+      thisView.settings = settings;
       // setup d3 window listeners
       d3.select(window).on("keydown",  function(){
         thisView.windowKeyDown.call(thisView);
@@ -578,13 +611,22 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var gPaths = thisView.gPaths;
 
       if (thisView.state.doPathsTrans){
+
+        d3.selectAll("." + consts.wispGClass).remove();
         gPaths.each(function(d){
           var d3el = d3.select(this),
-              edgePath = pvt.getEdgePath(d);
+              edgePath = pvt.getEdgePath(d),
+              longEdgeClass = consts.longEdgeClass;
+
           d3el.selectAll("path")
             .transition()
             .duration(thisView.pathTransTime)
             .attrTween("d", pvt.pathTween(edgePath, 4))
+            .each("start", function (d) {
+              var d3this = d3.select(this);
+              d3this.classed(longEdgeClass, false);
+              if (d3this.classed(consts.wispGClass)) d3this.remove();
+            })
             .each("end", function (d) {
               thisView.postRenderEdge.call(thisView, d, d3.select(this.parentElement));
             });
@@ -750,10 +792,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3El.select("." + consts.wispGClass).remove();
       d3El.select("." + consts.longEdgeClass).classed(consts.longEdgeClass, false);
       var thisView = this;
-      if (!thisView.scopeNode && thisView.doClipEdge(d)) {
+      if (!thisView.scopeNode && thisView.settings.useWisps
+          && thisView.doClipEdge(d)) {
         pvt.handleLongPaths(d, d3El);
       }
-
     },
 
 
@@ -779,7 +821,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           nodeHeight = pvt.consts.nodeRadius,
           nodes = thisGraph.get("nodes"),
           edges = thisGraph.get("edges"),
-          lrOrder = pvt.consts.graphDirection.toLowerCase() === "lr",
+          lrOrder = thisView.settings.graphDirection.toLowerCase() === "lr",
           transX = 0,
           transY = 0;
 
@@ -806,7 +848,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var layout = dagre.layout()
             .rankSep(80)
             .nodeSep(120) // TODO move defaults to consts
-            .rankDir(pvt.consts.graphDirection).run(dagreGraph);
+            .rankDir(thisView.settings.graphDirection).run(dagreGraph);
 
       // determine average x and y movement
       if (noMoveNodeId === undefined && minSSDist) {
@@ -860,8 +902,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         thisView.model.expandGraph();
         thisView.optimizeGraphPlacement(true, false, d.id);
       }
+
       // TODO remove hard coded scale and duration
-      var hasScope = thisView.scopeNode !== undefined && thisView.scopeNode !== null;
+      var hasScope = thisView.hasScope();
       var translateTrans = thisView.d3SvgG.transition()
             .duration(500)
             .attr("transform", function () {
@@ -996,7 +1039,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      */
     pathMouseOver: function (d, pathEl) {
       var thisView = this;
-      thisView.showEdgeSummary(d);
+      if (thisView.settings.showEdgeSummary) {
+        thisView.showEdgeSummary(d);
+      }
     },
 
     /**
@@ -1029,7 +1074,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3node.classed(hoveredClass, true);
 
       // show summary text
-      thisView.showNodeSummary(d);
+      if (thisView.settings.showNodeSummary) {
+        thisView.showNodeSummary(d);
+      }
 
       // show/emphasize connecting edges
       d.get("outlinks").each(function (ol) {
@@ -1185,6 +1232,14 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     },
 
     /**
+     * return {boolean} true if graph view is scoped
+     */
+    hasScope: function () {
+      var thisView = this;
+      return thisView.scopeNode !== undefined && thisView.scopeNode !== null;
+    },
+
+    /**
      * Return the g element of the path from the given model
      *
      * @param eModel: the edge model
@@ -1281,13 +1336,11 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      */
     doClipEdge: function(edge) {
       var thisView = this,
-          clipEdge = true;
-      if ((thisView.includeShortestOutlink && thisView.isEdgeShortest(edge, "outlink")) || thisView.isEdgeLengthBelowThresh(edge) || (thisView.includeShortestDep && thisView.isEdgeShortest(edge, "dep"))) {
+          clipEdge = true,
+          settings = thisView.settings;
+      if ((settings.includeShortestOutlink && thisView.isEdgeShortest(edge, "outlink")) || thisView.isEdgeLengthBelowThresh(edge) || (settings.includeShortestDep && thisView.isEdgeShortest(edge, "dep"))) {
         clipEdge = false;
-      } // else if (thisView.useTopoEdges && (thisView.model.isEdgeInTopoSort(edge) || thisView.isEdgeLengthBelowThresh(edge))) {
-      //   clipEdge = false;
-      // }
-
+      }
       return clipEdge;
     },
 
@@ -1304,7 +1357,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      */
     isEdgeVisiblyTransitive: function (edge) {
       var thisView = this;
-      return edge.get("isTransitive")
+      return !thisView.settings.showTransEdgesWisps && edge.get("isTransitive")
         && thisView.model.checkIfTransitive(edge, pvt.getEdgeVisibleNoTransFun.call(thisView));
     },
 
@@ -1374,13 +1427,14 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     },
 
     /**
-     * Set the scope node
+     * Set the scope node -- automatically changes the focus node
      */
     setScopeNode: function (d) {
       var thisView = this;
+      thisView.setFocusNode(d);
       pvt.changeNodeClasses.call(thisView, thisView.scopeNode, d, pvt.consts.scopeCircleGClass);
       thisView.scopeNode = d;
-      // delay info box so that animations finish
+      // delay info box so that animations finish TODO hardcoding
       window.setTimeout(function () {
         thisView.$el.addClass(pvt.consts.scopeClass);
       }, 800);
@@ -1403,6 +1457,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var thisView = this;
       pvt.changeNodeClasses.call(thisView, thisView.focusNode, d, pvt.consts.focusCircleGClass);
       thisView.focusNode = d;
+      thisView.model.trigger("setFocusNode", d.id);
     },
 
     /**

@@ -144,11 +144,9 @@
     background-color: rgb(250, 242, 248);
 }
 .learn-title-display.clicked-title{
-    /*background-color: rgb(255, 255, 249);*/
     font-weight: bold;
     color: #333333;
     background-color: rgb(245, 232, 242);
-    cursor: default;
 }
 
 .hide-clist #concept-list-wrapper, .hide-clist #concept-title-header{

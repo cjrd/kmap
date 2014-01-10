@@ -12,7 +12,8 @@ define(["backbone", "underscore"], function (Backbone, _) {
 
     pvt.consts = {
       viewClass: "learn-title-display",
-      viewIdPrefix: "node-title-view-" // must also change in parent
+      viewIdPrefix: "node-title-view-", // must also change in parent
+      clickedItmClass: "clicked-title" // must also change in parent
     };
 
     // return public object for node list item view
@@ -28,8 +29,16 @@ define(["backbone", "underscore"], function (Backbone, _) {
         "click": function(evt){
           var thisView = this,
               modelId = thisView.model.id;
-          thisView.parentView.changeSelectedTitle(modelId);
-          thisView.model.trigger("setFocusNode", modelId);
+
+          if (!thisView.$el.hasClass(pvt.consts.clickedItmClass)) {
+            // set focus if not currently focused
+            thisView.model.trigger("setFocusNode", modelId);
+          } else {
+            // else, if currently focused, toggle scope
+            thisView.model.trigger("toggleNodeScope", modelId);
+          }
+          // change url parameters if using a router
+          this.appRouter && this.appRouter.changeUrlParams({focus: this.model.id});
         }
       },
 
