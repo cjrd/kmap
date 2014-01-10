@@ -42,6 +42,9 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
         var thisView = this;
         thisView.preinitialize(inp);
         thisView.idToTitleView = {};
+        thisView.listenTo(thisView.model, "setFocusNode", function (id) {
+          thisView.changeSelectedTitle(id);
+        });
         thisView.postinitialize(inp);
       },
 

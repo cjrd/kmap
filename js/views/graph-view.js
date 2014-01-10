@@ -215,6 +215,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     }
   };
 
+  /**
+   * Smooth path animation interpolation
+   */
   // from http://bl.ocks.org/mbostock/3916621
   pvt.pathTween = function (d1, precision) {
     return function() {
@@ -277,6 +280,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     };
   };
 
+  /**
+   * Add expand/contract icon to the nodes
+   */
   pvt.addECIcon = function(d, d3el, isDeps){
     var thisView = this,
         consts = pvt.consts,
@@ -371,7 +377,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       longPaths.classed(consts.longEdgeClass, true);
     }
 
-    // TODO remove hardcoding to consts
     wispsG = d3this.insert("g", ":first-child")
       .classed(consts.wispGClass, true);
     wispsG.append("path")
@@ -491,12 +496,33 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       thisView.summaryTOKillList = {};
       thisView.summaryTOStartList = {};
 
-      // TODO find a better way to communicate between views
+      // TODO find a better way to communicate between views w/out involving urls
       thisView.listenTo(thisView.model, "render", thisView.render);
       thisView.listenTo(thisView.model, "setFocusNode", function (id) {
+        if (thisView.state.isFocusing) {
+          return;
+        }
+        thisView.state.isFocusing = true;
         var inpNode = thisView.model.getNode(id);
-        thisView.setFocusNode(inpNode);
-        thisView.centerForNode(inpNode);
+        if (thisView.hasScope() && thisView.isNodeVisible(inpNode)){
+          // if node is visible and in scope mode, simply simulate a click event on the node
+          var el = document.getElementById(thisView.getCircleGId(inpNode));
+          thisView.simulate(el, "mousedown");
+          thisView.simulate(el, "mouseup");
+        } else if (!thisView.focusNode ||  thisView.focusNode.id !== inpNode.id){
+          // order matters - must set focus _after_ rendering
+          thisView.centerForNode(inpNode);
+          thisView.setFocusNode(inpNode);
+        }
+        thisView.state.isFocusing = false;
+      });
+
+      thisView.listenTo(thisView.model, "toggleNodeScope", function (id) {
+        // toggle node scope by simulating a mouse click on the node
+        var inpNode = thisView.model.getNode(id),
+            el = document.getElementById(thisView.getCircleGId(inpNode));
+        thisView.simulate(el, "mousedown");
+        thisView.simulate(el, "mouseup");
       });
 
       // set instance variables -- can overwrite in subclasses
@@ -754,10 +780,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3El.select("." + consts.wispGClass).remove();
       d3El.select("." + consts.longEdgeClass).classed(consts.longEdgeClass, false);
       var thisView = this;
-      if (!thisView.scopeNode && thisView.settings.useWisps && thisView.doClipEdge(d)) {
+      if (!thisView.scopeNode && thisView.settings.useWisps
+          && thisView.doClipEdge(d)) {
         pvt.handleLongPaths(d, d3El);
       }
-
     },
 
 
@@ -864,8 +890,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         thisView.model.expandGraph();
         thisView.optimizeGraphPlacement(true, false, d.id);
       }
+
       // TODO remove hard coded scale and duration
-      var hasScope = thisView.scopeNode !== undefined && thisView.scopeNode !== null;
+      var hasScope = thisView.hasScope();
       var translateTrans = thisView.d3SvgG.transition()
             .duration(500)
             .attr("transform", function () {
@@ -1193,6 +1220,14 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     },
 
     /**
+     * return {boolean} true if graph view is scoped
+     */
+    hasScope: function () {
+      var thisView = this;
+      return thisView.scopeNode !== undefined && thisView.scopeNode !== null;
+    },
+
+    /**
      * Return the g element of the path from the given model
      *
      * @param eModel: the edge model
@@ -1380,13 +1415,14 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     },
 
     /**
-     * Set the scope node
+     * Set the scope node -- automatically changes the focus node
      */
     setScopeNode: function (d) {
       var thisView = this;
+      thisView.setFocusNode(d);
       pvt.changeNodeClasses.call(thisView, thisView.scopeNode, d, pvt.consts.scopeCircleGClass);
       thisView.scopeNode = d;
-      // delay info box so that animations finish
+      // delay info box so that animations finish TODO hardcoding
       window.setTimeout(function () {
         thisView.$el.addClass(pvt.consts.scopeClass);
       }, 800);
@@ -1409,6 +1445,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var thisView = this;
       pvt.changeNodeClasses.call(thisView, thisView.focusNode, d, pvt.consts.focusCircleGClass);
       thisView.focusNode = d;
+      thisView.model.trigger("setFocusNode", d.id);
     },
 
     /**

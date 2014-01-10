@@ -21,6 +21,10 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       thisModel.get("nodes").on("setFocusNode", function(id){
         thisModel.trigger("setFocusNode", id);
       });
+      thisModel.get("nodes").on("toggleNodeScope", function(id){
+        thisModel.trigger("toggleNodeScope", id);
+      });
+
       thisModel.postinitialize();
     },
 
