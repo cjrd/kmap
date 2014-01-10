@@ -498,6 +498,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // TODO find a better way to communicate between views w/out involving urls
       thisView.listenTo(thisView.model, "render", thisView.render);
+
+      // change/set focus node
       thisView.listenTo(thisView.model, "setFocusNode", function (id) {
         if (thisView.state.isFocusing) {
           return;
@@ -517,6 +519,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         thisView.state.isFocusing = false;
       });
 
+      // change node scope
       thisView.listenTo(thisView.model, "toggleNodeScope", function (id) {
         // toggle node scope by simulating a mouse click on the node
         var inpNode = thisView.model.getNode(id),
@@ -608,13 +611,22 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var gPaths = thisView.gPaths;
 
       if (thisView.state.doPathsTrans){
+
+        d3.selectAll("." + consts.wispGClass).remove();
         gPaths.each(function(d){
           var d3el = d3.select(this),
-              edgePath = pvt.getEdgePath(d);
+              edgePath = pvt.getEdgePath(d),
+              longEdgeClass = consts.longEdgeClass;
+
           d3el.selectAll("path")
             .transition()
             .duration(thisView.pathTransTime)
             .attrTween("d", pvt.pathTween(edgePath, 4))
+            .each("start", function (d) {
+              var d3this = d3.select(this);
+              d3this.classed(longEdgeClass, false);
+              if (d3this.classed(consts.wispGClass)) d3this.remove();
+            })
             .each("end", function (d) {
               thisView.postRenderEdge.call(thisView, d, d3.select(this.parentElement));
             });

@@ -29,6 +29,7 @@ define(["backbone", "underscore"], function (Backbone, _) {
         "click": function(evt){
           var thisView = this,
               modelId = thisView.model.id;
+
           if (!thisView.$el.hasClass(pvt.consts.clickedItmClass)) {
             // set focus if not currently focused
             thisView.model.trigger("setFocusNode", modelId);
@@ -36,6 +37,8 @@ define(["backbone", "underscore"], function (Backbone, _) {
             // else, if currently focused, toggle scope
             thisView.model.trigger("toggleNodeScope", modelId);
           }
+          // change url parameters if using a router
+          this.appRouter && this.appRouter.changeUrlParams({focus: this.model.id});
         }
       },
 
