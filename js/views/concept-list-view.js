@@ -162,7 +162,7 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
         }
 
         thisView.model.getNodes().each(function (node) {
-          if (!inpVal.length || node.get("title").toLowerCase().match("^" + inpVal)) {
+          if (!inpVal.length || node.get("title").toLowerCase().match(inpVal)) {
             $("#" + pvt.consts.titleIdPrefix + node.id).show();
           } else {
             $("#" + pvt.consts.titleIdPrefix + node.id ).hide();
