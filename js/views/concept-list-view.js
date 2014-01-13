@@ -28,8 +28,98 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
         "keyup #concept-list-search-input": "keyUpCLSearchInput",
         "click #concept-list-show-button": "clickListShowButton",
         "click #concept-list-hide-button": "clickListHideButton",
-        "click #cancel-search-input": "clickCancelSearchInput"
+        "click #cancel-search-input": "clickCancelSearchInput",
+        "change #grade-select": "changeGradeSelect",
+        "change #ee-select": "changeEESelect",
+        "change #cluster-select": "changeClusterSelect"
       },
+      // TODO FIXME DLM only
+      changeGradeSelect: function(evt) {
+        var thisView = this,
+            grade = evt.currentTarget.value;
+        thisView.grade = grade === "HS" ? grade : Number(grade);
+        thisView.applyFilter();
+      },
+      // TODO FIXME DLM only
+      changeEESelect: function(evt) {
+        var thisView = this,
+            ee = evt.currentTarget.value;
+        thisView.ee = ee;
+        thisView.applyFilter();
+      },
+      // TODO FIXME DLM only
+      changeClusterSelect: function(evt) {
+        var thisView = this,
+            cluster = evt.currentTarget.value;
+        thisView.cluster = cluster;
+        thisView.applyFilter();
+      },
+      applyFilter: function () {
+        // TODO this is spaghetttttiii
+
+        var thisView = this,
+            thisModel = thisView.model;
+
+        // remove previous bridge edges
+        var remEdges = thisView.model.getEdges().filter(function (edge) {
+          return edge.get("bridge");
+        });
+
+        remEdges.forEach(function(edge){ thisModel.removeEdge(edge);});
+
+        thisModel.getNodes().each(function (node) {
+          node.hideNode = (thisView.cluster
+                           && node.get("clusters").indexOf(thisView.cluster) === -1)
+            || (thisView.ee
+                && node.get("ees").indexOf(thisView.ee) === -1)
+            || (thisView.grade
+                && node.get("grades").indexOf(thisView.grade) === -1);
+          if (node.hideNode) {
+            // TODO cache these
+            $("#" + pvt.consts.titleIdPrefix + node.id).hide();
+          } else {
+            $("#" + pvt.consts.titleIdPrefix + node.id).show();
+          }
+        });
+
+        // add bridge edges TODO this only adds a single bridge edge (add them all?)
+        if (thisView.cluster || thisView.ee || thisView.grade) {
+          var visNodesNoDeps = thisModel.getNodes().filter(function (node) {
+            return !node.hideNode && node.get("dependencies").length && node.get("dependencies").all(function (dep) {
+              return dep.get("source").hideNode;
+            });
+          });
+          visNodesNoDeps.forEach(function (vnode) {
+            var tovisit = vnode.get("dependencies").map(function(d){return d.get("source");}),
+                visitedNodes = {},
+                bNodes = [],
+                curNode;
+            while (tovisit.length) {
+              curNode = tovisit.shift();
+              visitedNodes[curNode.id] = 1;
+              if (!curNode.hideNode) {
+                // make sure there's not a path between the bridge nodes
+                // (don't want too many bridges)
+                if (!_.any(bNodes, function (bnid) {
+                  return thisModel.isPathBetweenNodes(curNode, thisModel.getNode(bnid));
+                })) {
+                  var newEdge = {"source": curNode.id, "target": vnode.id, "bridge": 1};
+                  thisView.model.addEdge(newEdge);
+                }
+                bNodes.push(curNode.id);
+              } else {
+                curNode.get("dependencies").each(function (cdep) {
+                  tovisit.push(cdep.get("source"));
+                });
+              }
+            }
+          });
+        }
+        thisView.model.trigger("optimize");
+        thisView.model.trigger("center");
+        thisView.model.trigger("render");
+      },
+
 
       /** override in subclass */
       preinitialize: function () {},

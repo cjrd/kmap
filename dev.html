@@ -23,21 +23,172 @@
       </div>
 
       <div id="concept-title-header">
-        <h1>
-          Concept List
-        </h1>
-        <div id="explore-learn-tools">
-          <div id="concept-list-search">
-            <input type="text" id="concept-list-search-input" placeholder="enter the name of a concept to find it">
-            <input type="button" value="Clear" id="cancel-search-input" style="top: 39px;">
+        <div class="header-selector">
+          <h1 id="concept-list-header-itm" style="border-left: 0;">
+            Concept List
+          </h1>
+        </div>
+        <div id="filter-tools">
+
+          <div class="graph-select-div">
+            Grade:
+            <select id="grade-select">
+              <option value="">
+                -
+              </option>
+              <option value="3">
+                3
+              </option>
+              <option value="4">
+                4
+              </option>
+              <option value="5">
+                5
+              </option>
+              <option value="6">
+                6
+              </option>
+              <option value="7">
+                7
+              </option>
+              <option value="8">
+                8
+              </option>
+              <option value="HS">
+                HS
+              </option>
+            </select>
           </div>
 
-          <div id="concept-list-hide-button" style="font-size: 1.4em; padding: 0  0.1em 0.2em 0.1em;">
-            «
+          <div class="graph-select-div">
+            EE:
+            <select id="ee-select">
+              <option value="">
+                -
+              </option>
+              <option value="M.EE.3.G.1">
+                M.EE.3.G.1
+              </option>
+              <option value="M.EE.4.G.1">
+                M.EE.4.G.1
+              </option>
+              <option value="M.EE.4.G.2">
+                M.EE.4.G.2
+              </option>
+              <option value="M.EE.4.MD.5">
+                M.EE.4.MD.5
+              </option>
+              <option value="M.EE.4.MD.6">
+                M.EE.4.MD.6
+              </option>
+              <option value="M.EE.5.G.1-4">
+                M.EE.5.G.1-4
+              </option>
+              <option value="M.EE.5.MD.3">
+                M.EE.5.MD.3
+              </option>
+              <option value="M.EE.7.G.1">
+                M.EE.7.G.1
+              </option>
+              <option value="M.EE.7.G.2">
+                M.EE.7.G.2
+              </option>
+              <option value="M.EE.7.G.3">
+                M.EE.7.G.3
+              </option>
+              <option value="M.EE.7.G.5">
+                M.EE.7.G.5
+              </option>
+              <option value="M.EE.8.G.1">
+                M.EE.8.G.1
+              </option>
+              <option value="M.EE.8.G.2">
+                M.EE.8.G.2
+              </option>
+              <option value="M.EE.8.G.4">
+                M.EE.8.G.4
+              </option>
+              <option value="M.EE.8.G.5">
+                M.EE.8.G.5
+              </option>
+              <option value="M.EE.HS.G-C0.1">
+                M.EE.HS.G-C0.1
+              </option>
+              <option value="M.EE.HS.G-C0.6-8">
+                M.EE.HS.G-C0.6-8
+              </option>
+              <option value="M.EE.HS.G-GMD.4">
+                M.EE.HS.G-GMD.4
+              </option>
+              <option value="M.EE.3.G.2">
+                M.EE.3.G.2
+              </option>
+              <option value="M.EE.4.G.3">
+                M.EE.4.G.3
+              </option>
+              <option value="M.EE.4.MD.3">
+                M.EE.4.MD.3
+              </option>
+              <option value="M.EE.4.MD.4-5">
+                M.EE.4.MD.4-5
+              </option>
+              <option value="M.EE.6.G.1">
+                M.EE.6.G.1
+              </option>
+              <option value="M.EE.6.G.2">
+                M.EE.6.G.2
+              </option>
+              <option value="M.EE.7.G.4">
+                M.EE.7.G.4
+              </option>
+              <option value="M.EE.7.G.6">
+                M.EE.7.G.6
+              </option>
+              <option value="M.EE.8.G.9">
+                M.EE.8.G.9
+              </option>
+              <option value="M.EE.HS.G-GPE.7">
+                M.EE.HS.G-GPE.7
+              </option>
+            </select>
           </div>
 
+          <div class="graph-select-div">
+            Cluster:
+            <select id="cluster-select">
+              <option value="">
+                -
+              </option>
+              <option value="G">
+                G
+              </option>
+              <option value="MD">
+                MD
+              </option>
+              <option value="G-CO">
+                G-CO
+              </option>
+              <option value="G-GMD">
+                G-GMD
+              </option>
+              <option value="G-GPE">
+                G-GPE
+              </option>
+            </select>
+          </div>
+        </div>
+
+      <div id="explore-learn-tools">
+        <div id="concept-list-search">
+          <input type="text" id="concept-list-search-input" placeholder="enter the name of a concept to find it">
+          <input type="button" value="Clear" id="cancel-search-input" style="top: 11.1em; right: 1.9em">
+        </div>
+        <div id="concept-list-hide-button" style="font-size: 1.4em; padding: 0  0.1em 0.2em 0.1em;">
+          «
         </div>
       </div>
+      </div>
+
 
       <div id="concept-list-wrapper">
         <ol id="concept-list">

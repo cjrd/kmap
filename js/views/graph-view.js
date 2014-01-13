@@ -498,6 +498,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // TODO find a better way to communicate between views w/out involving urls
       thisView.listenTo(thisView.model, "render", thisView.render);
+      thisView.listenTo(thisView.model, "optimize", thisView.optimizeGraphPlacement);
+      thisView.listenTo(thisView.model, "center", thisView.centerForEndNode);
 
       // change/set focus node
       thisView.listenTo(thisView.model, "setFocusNode", function (id) {
@@ -609,9 +611,15 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
               });
 
       var gPaths = thisView.gPaths;
+      // remove old links
+      gPaths.exit()
+        .transition()
+        .duration(thisView.rmPathTransTime)
+        .attr("opacity", 0)
+        .remove(); // TODO add appropriate animation
+
 
       if (thisView.state.doPathsTrans){
-
         d3.selectAll("." + consts.wispGClass).remove();
         gPaths.each(function(d){
           var d3el = d3.select(this),
@@ -664,7 +672,15 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           d3el.append("path")
             .attr("d", edgePath )
             .classed(pvt.consts.pathWrapClass, true);
+
+          // FIXME DLM HACK
+          if (d.get("bridge")){
+            d3el.classed("bridge", true);
+            d3el.selectAll("path." + pvt.consts.pathClass)
+              .attr("stroke-dasharray", consts.wispDashArray);
+          }
         });
+
 
       newPathsG.transition()
         .delay(thisView.newPathTransDelay)
@@ -685,13 +701,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // call subview function
       thisView.handleNewPaths(newPathsG);
-
-      // remove old links
-      gPaths.exit()
-        .transition()
-        .duration(thisView.rmPathTransTime)
-        .attr("opacity", 0)
-        .remove(); // TODO add appropriate animation
 
       //***************
       // Render Circles
@@ -885,6 +894,24 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       if (doRender) {
         thisView.render();
       }
+    },
+
+    /**
+     * Center for the final visible node in the dfs
+     */
+    centerForEndNode: function () {
+      var thisView = this,
+          thisModel = thisView.model,
+          topoSort = thisModel.getTopoSort(),
+          endNode = null,
+          i = topoSort.length;;
+      while( i -- ){
+        endNode = thisModel.getNode(topoSort[i]);
+        if (thisView.isNodeVisible(endNode)){
+          break;
+        }
+      }
+      thisView.centerForNode(endNode);
     },
 
     /**
@@ -1313,7 +1340,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      * @return {boolean} true if the node circle is visible
      */
     isNodeVisible: function(node){
-      return !node.get("isContracted");
+      return !node.hideNode && !node.get("isContracted");
     },
 
     /**
@@ -1338,7 +1365,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var thisView = this,
           clipEdge = true,
           settings = thisView.settings;
-      if ((settings.includeShortestOutlink && thisView.isEdgeShortest(edge, "outlink")) || thisView.isEdgeLengthBelowThresh(edge) || (settings.includeShortestDep && thisView.isEdgeShortest(edge, "dep"))) {
+
+      if (edge.get("bridge") || (settings.includeShortestOutlink && thisView.isEdgeShortest(edge, "outlink")) || thisView.isEdgeLengthBelowThresh(edge) || (settings.includeShortestDep && thisView.isEdgeShortest(edge, "dep"))) {
         clipEdge = false;
       }
       return clipEdge;

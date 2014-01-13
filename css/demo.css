@@ -21,3 +21,47 @@ body {
     height: inherit;
     overflow: auto;
 }
+
+#concept-list-header-itm:hover, #filter-list-header-itm:hover{
+    background: #efefef;
+}
+
+.filter #filter-list-header-itm{
+    background: rgb(105, 95, 95);
+    color: white;
+}
+
+.concept #concept-list-header-itm{
+    background: rgb(105, 95, 95);
+    color: white;
+}
+
+.graph-select-div{
+    padding-left: 2em;
+    margin-bottom: 0.5em;
+    font-size: 0.9em;
+}
+
+.graph-select-div select{
+    position: absolute;
+    left: 8em;
+}
+
+#concept-list-panel #concept-title-header{
+    height: 9em;
+}
+#concept-list-panel #concept-list-wrapper{
+    top: 9em;
+}
+#concept-list-panel #concept-list{
+    padding-bottom: 9em;
+}
+#concept-list-panel #explore-learn-tools #concept-list-search input{
+    margin-top: 0.4em;
+}
+
+
+/** BRIDGE LINKS **/
+g.bridge path.link{
+    stroke: rgb(255, 143, 0);
+}
