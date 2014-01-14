@@ -28,7 +28,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       thisModel.postinitialize();
     },
 
-
     // override in subclass
     postinitialize: function(){},
 
@@ -92,7 +91,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      * @return {backbone model} this model altered by the jsonObj (allows chaining)
      */
     addJsonNodesToGraph: function(jsonNodeArr) {
-
       var thisGraph = this,
           tmpEdges = [];
 

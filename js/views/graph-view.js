@@ -1002,13 +1002,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var thisView = this,
           consts = pvt.consts;
 
-      thisView.dzoom = d3.behavior.zoom();
+      thisView.dzoom = d3.behavior.zoom()
+                         .on("zoom", redraw)
+                         .on("zoomstart", startZoom)
+                         .on("zoomend", endZoom);
       var dzoom = thisView.dzoom;
       // make graph zoomable/translatable
       var vis = thisView.d3Svg
             .attr("pointer-events", "all")
             .attr("viewBox", null)
-            .call(dzoom.on("zoom", redraw))
+            .call(dzoom)
             .select("g");
 
       // set the zoom scale
@@ -1017,6 +1020,15 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           nodeLoc,
           d3event,
           currentScale;
+
+      function startZoom() {
+        // add move cursor
+        d3.select("body").style("cursor", "move");
+      }
+      function endZoom() {
+        // change cursor back to normal
+        d3.select("body").style("cursor", "auto");
+      }
 
       // helper function to redraw svg graph with correct coordinates
       function redraw() {
