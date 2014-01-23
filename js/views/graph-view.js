@@ -605,7 +605,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
               .filter(function(mdl){
                 return thisView.isEdgeVisible(mdl);
               }), function(d){
-                return d.id;
+                return d.cid;
               });
 
       var gPaths = thisView.gPaths;
@@ -700,7 +700,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       thisView.gCircles = thisView.gCircles
         .data(thisView.model.getNodes().filter(function(mdl){return thisView.isNodeVisible(mdl);}),
               function(d){
-                return d.id;
+                return d.cid;
               });
 
       thisView.gCircles.exit()
@@ -1274,11 +1274,11 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      *
      * @return <string> the id of circleG
      */
-    getCircleGId: function  (nodeModelOrId) {
-      if (nodeModelOrId.id !== undefined){
-        nodeModelOrId = nodeModelOrId.id;
+    getCircleGId: function  (nodeModelOrCid) {
+      if (nodeModelOrCid.cid !== undefined){
+        nodeModelOrCid = nodeModelOrCid.cid;
       }
-      return pvt.consts.circleGIdPrefix + nodeModelOrId;
+      return pvt.consts.circleGIdPrefix + nodeModelOrCid;
     },
 
     /**
@@ -1287,7 +1287,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      * @return <string> the id of edgeG
      */
     getPathGId: function  (edgeModel) {
-      return pvt.consts.edgeGIdPrefix + edgeModel.id;
+      return pvt.consts.edgeGIdPrefix + edgeModel.cid;
     },
 
     /**

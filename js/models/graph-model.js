@@ -1,11 +1,30 @@
+
 /*global define */
 define(["jquery", "underscore", "backbone", "../collections/edge-collection", "../collections/node-collection", "../models/node-model", "../models/edge-model"], function($, _, Backbone, BaseEdgeCollection, BaseNodeCollection){
   var pvt = {};
 
   pvt.alwaysTrue = function(){return true;};
 
-  return Backbone.Model.extend({
+  pvt.setEdgeId = function (edge) {
+    var src,
+        tar,
+        needsServerId;
 
+    if (edge.set) {
+      // edge is a backbone model
+      src = edge.get("source");
+      tar = edge.get("target");
+      edge.set("id", String(src.id) + String(tar.id));
+      edge.set("needsServerId",!src.hasServerId || !tar.hasServerId);
+    } else {
+      src = edge.source;
+      tar = edge.target;
+      edge.id = String(src.id) + String(tar.id);
+      edge.needsServerId = !src.hasServerId || !tar.hasServerId;
+    }
+  };
+
+  return Backbone.Model.extend({
     defaults: function(){
       return {
         leafs: [], // TODO perhaps this should be stored in the nodes
@@ -208,9 +227,9 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      */
     addEdge: function(edge) {
       var thisGraph = this,
-      // check if source/target are ids and switch to nodes if necessary
-      source =  edge.source instanceof thisGraph.nodeModel ? edge.source : this.getNode(edge.source),
-      target = edge.target instanceof thisGraph.nodeModel ? edge.target : this.getNode(edge.target);
+          // check if source/target are ids and switch to nodes if necessary
+          source =  edge.source instanceof thisGraph.nodeModel ? edge.source : this.getNode(edge.source),
+          target = edge.target instanceof thisGraph.nodeModel ? edge.target : this.getNode(edge.target);
 
       if (!source  || !target) {
         throw new Error("source or target was not given correctly for input or does not exist in graph: " + edge.source + " -> " + edge.target );
@@ -225,7 +244,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       }
 
       if (edge.id === undefined) {
-        edge.id = String(edge.source.id) + String(edge.target.id);
+        pvt.setEdgeId(edge);
       }
 
       // check if this edge is transitive
@@ -252,15 +271,49 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
     /**
      * Add a node to the graph
+     * Note:
+     * new nodes that should be synced with a server
+     * should not have an id specified and should have a defined "url"
+     * in the node backbone model or they should have the property
+     * "syncWithServer" set to a non-falsey value
      *
      * @param {node object} node: the node to be added to the model
      */
     addNode: function(node) {
-      var thisGraph = this;
+      var thisGraph = this,
+          isNewNode = false;
       if (!(node instanceof thisGraph.nodeModel )){
+        var nodeId = node.id;
+        if (nodeId === undefined || nodeId === null || nodeId === "") {
+          isNewNode = true;
+          node.id = "-new-" + Math.random().toString(36).substring(3);
+        }
         node = new thisGraph.nodeModel(node, {parse: true});
       }
       this.get("nodes").add(node);
+
+      if (node.url && (isNewNode || node.get("syncWithServer"))) {
+        node.hasServerId = false;
+
+        node.save(["id", "tag"], {
+          parse  : false, // NB must check for parse == false in model's parse method
+          success: function (model, xhr) {
+            node.set("id", xhr.id);
+            node.set("tag", xhr.tag);
+            node.hasServerId = true;
+
+            // set edge ids that were waiting for the server
+            thisGraph.getEdges().filter(function (edge) {
+              return edge.get("needsServerId");
+            }).forEach(pvt.setEdgeId);
+          },
+          error: function (model, xhr) {
+            console.log("error response text:" + xhr.responseText);
+          }
+        });
+      } else {
+        node.hasServerId = true;
+      }
     },
 
     /**
