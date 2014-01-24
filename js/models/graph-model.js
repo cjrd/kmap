@@ -58,7 +58,11 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      */
     toJSON: function() {
       // returning nodes AND edges is redundant, since nodes contain dep info
-      return this.get("nodes").toJSON();
+      return {
+        id: this.get("id"),
+        title: this.get("title"),
+        concepts: this.get("nodes").toJSON()
+      };
     },
 
     /**

@@ -1282,7 +1282,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     },
 
     /**
-     * Return the edgeG id for a a nodeModel
+     * Return the edgeG id for a nodeModel
      *
      * @return <string> the id of edgeG
      */
