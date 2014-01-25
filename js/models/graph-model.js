@@ -35,8 +35,8 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
     initialize: function(){
       var thisModel = this;
-      thisModel.edgeModel = thisModel.get("edges").model;
-      thisModel.nodeModel = thisModel.get("nodes").model;
+      thisModel.edgeModel = thisModel.edgeModel || thisModel.get("edges").model;
+      thisModel.nodeModel = thisModel.nodeModel || thisModel.get("nodes").model;
       thisModel.get("nodes").on("setFocusNode", function(id){
         thisModel.trigger("setFocusNode", id);
       });
@@ -232,8 +232,8 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
     addEdge: function(edge) {
       var thisGraph = this,
           // check if source/target are ids and switch to nodes if necessary
-          source =  edge.source instanceof thisGraph.nodeModel ? edge.source : this.getNode(edge.source),
-          target = edge.target instanceof thisGraph.nodeModel ? edge.target : this.getNode(edge.target);
+          source =  typeof edge.source === "string"  ? this.getNode(edge.source) : edge.source,
+          target = typeof edge.target === "string" ? this.getNode(edge.target) :  edge.target;
 
       if (!source  || !target) {
         throw new Error("source or target was not given correctly for input or does not exist in graph: " + edge.source + " -> " + edge.target );
@@ -286,7 +286,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
     addNode: function(node) {
       var thisGraph = this,
           isNewNode = false;
-      if (!(node instanceof thisGraph.nodeModel )){
+      if (!(node.set )){
         var nodeId = node.id;
         if (nodeId === undefined || nodeId === null || nodeId === "") {
           isNewNode = true;
@@ -294,7 +294,9 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
         }
         node = new thisGraph.nodeModel(node, {parse: true});
       }
-      this.get("nodes").add(node);
+      thisGraph.getNodes().add(node);
+
+//!!!!      PROBLEM: nodeModel is defined in init (perhaps check if its defined here)
 
       if (node.url && (isNewNode || node.get("syncWithServer"))) {
         node.hasServerId = false;
