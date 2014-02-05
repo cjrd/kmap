@@ -296,8 +296,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       }
       thisGraph.getNodes().add(node);
 
-//!!!!      PROBLEM: nodeModel is defined in init (perhaps check if its defined here)
-
       if (node.url && (isNewNode || node.get("syncWithServer"))) {
         node.hasServerId = false;
 
