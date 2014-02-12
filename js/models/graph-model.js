@@ -61,7 +61,8 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       return {
         id: this.get("id"),
         title: this.get("title"),
-        concepts: this.get("nodes").toJSON()
+        concepts: this.get("nodes").toJSON(),
+        dependencies: this.get("edges").toJSON()
       };
     },
 
@@ -228,6 +229,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      * outlinks/dependencies properties in the appropriate nodes
      *
      * @param {edge object} edge: the edge to be added to the model
+     * @param {object} extrasObj: an object with extra options that is passed through to postAddEdge
      */
     addEdge: function(edge) {
       var thisGraph = this,
@@ -257,7 +259,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
       //
       var edges = thisGraph.getEdges();
-      edges.add(edge);
+      edges.add(edge, {parse: true});
       var mEdge = edges.get(edge.id);
       edge.source.get("outlinks").add(mEdge);
       edge.target.get("dependencies").add(mEdge);
@@ -271,6 +273,16 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
           }
         });
       }
+      thisGraph.postAddEdge(mEdge);
+    },
+
+    /**
+     * postAddEdge: called at the end of the addEdge function
+     *
+     * @param {edge object} edge: the edge just added to the model
+     */
+    postAddEdge: function (edge) {
+
     },
 
     /**
@@ -290,7 +302,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
         var nodeId = node.id;
         if (nodeId === undefined || nodeId === null || nodeId === "") {
           isNewNode = true;
-          node.id = "-new-" + Math.random().toString(36).substring(3);
+          node.id =  Math.random().toString(36).substring(3);
         }
         node = new thisGraph.nodeModel(node, {parse: true});
       }
@@ -299,25 +311,36 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       if (node.url && (isNewNode || node.get("syncWithServer"))) {
         node.hasServerId = false;
 
-        node.save(["id", "tag"], {
-          parse  : false, // NB must check for parse == false in model's parse method
-          success: function (model, xhr) {
-            node.set("id", xhr.id);
-            node.set("tag", xhr.tag);
+        // TODO HARDCODED URL
+        $.get("http://127.0.0.1:8080/graphs/idchecker/", {id: node.id, type: "concept" })
+          .success(function (resp) {
+            node.set("id", resp.id);
+            node.set("tag", resp.id);
             node.hasServerId = true;
-
             // set edge ids that were waiting for the server
             thisGraph.getEdges().filter(function (edge) {
               return edge.get("needsServerId");
             }).forEach(pvt.setEdgeId);
-          },
-          error: function (model, xhr) {
-            console.log("error response text:" + xhr.responseText);
-          }
-        });
+          })
+          .fail(function (resp){
+            // failure
+            console.error("unable to verify new resource id -- TODO inform user -- msg: "
+                          + resp.responseText);
+          });
       } else {
         node.hasServerId = true;
       }
+
+      thisGraph.postAddNode(node);
+    },
+
+    /**
+     * postAddNode: called at the end of the addNode function
+     *
+     * @param {node object} node: the node just added to the model
+     */
+    postAddNode: function (node) {
+
     },
 
     /**
