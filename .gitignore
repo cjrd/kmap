@@ -1,3 +1,4 @@
 .tern-port
 .DS_Store
 demo_kmap.json
+.tmp_files
