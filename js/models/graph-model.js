@@ -312,7 +312,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
         node.hasServerId = false;
 
         // TODO HARDCODED URL
-        $.get("http://127.0.0.1:8080/graphs/idchecker/", {id: node.id, type: "concept" })
+        $.get("/graphs/idchecker/", {id: node.id, type: "concept" })
           .success(function (resp) {
             node.set("id", resp.id);
             node.set("tag", resp.id);

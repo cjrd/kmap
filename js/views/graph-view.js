@@ -206,11 +206,11 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     var thisView = this,
         gId;
     if (prevD) {
-      gId = thisView.getCircleGId(prevD.id);
+      gId = thisView.getCircleGId(prevD);
       d3.select("#" + gId).classed(classVal, false);
     }
     if (nextD) {
-      gId = thisView.getCircleGId(nextD.id);
+      gId = thisView.getCircleGId(nextD);
       d3.select("#" + gId).classed(classVal, true);
     }
   };
@@ -1092,20 +1092,20 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // show/emphasize connecting edges
       d.get("outlinks").each(function (ol) {
-        d3.select("#" + consts.edgeGIdPrefix + ol.id)
+        d3.select("#" + consts.edgeGIdPrefix + ol.cid)
           .classed(consts.linkWrapHoverClass, true)
           .classed(consts.depLinkWrapHoverClass, true);
         if (thisView.isEdgeVisible(ol)){
-          d3.select("#" + consts.circleGIdPrefix + ol.get("target").id)
+          d3.select("#" + consts.circleGIdPrefix + ol.get("target").cid)
             .select("circle")
             .classed(consts.olCircleClass, true);
         }
       });
       d.get("dependencies").each(function (dep) {
-        d3.select("#" + consts.edgeGIdPrefix + dep.id)
+        d3.select("#" + consts.edgeGIdPrefix + dep.cid)
           .classed(consts.linkWrapHoverClass, true);
         if (thisView.isEdgeVisible(dep)){
-          d3.select("#" + consts.circleGIdPrefix + dep.get("source").id)
+          d3.select("#" + consts.circleGIdPrefix + dep.get("source").cid)
             .select("circle")
             .classed(consts.depCircleClass, true);
         }
@@ -1139,18 +1139,18 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3node.classed(hoveredClass, false); // FIXME align class options once summary display is figured out
       // show/emphasize connecting edges
       d.get("outlinks").each(function (ol) {
-        d3.select("#" + consts.edgeGIdPrefix + ol.id)
+        d3.select("#" + consts.edgeGIdPrefix + ol.cid)
           .classed(consts.linkWrapHoverClass, false)
           .classed(consts.depLinkWrapHoverClass, false);
-        d3.select("#" + consts.circleGIdPrefix + ol.get("target").id)
+        d3.select("#" + consts.circleGIdPrefix + ol.get("target").cid)
           .select("circle")
           .classed(consts.olCircleClass, false);
 
       });
       d.get("dependencies").each(function (dep) {
-        d3.select("#" + consts.edgeGIdPrefix + dep.id)
+        d3.select("#" + consts.edgeGIdPrefix + dep.cid)
           .classed(consts.linkWrapHoverClass, false);
-        d3.select("#" + consts.circleGIdPrefix + dep.get("source").id)
+        d3.select("#" + consts.circleGIdPrefix + dep.get("source").cid)
           .select("circle")
           .classed(consts.depCircleClass, false);
       });
@@ -1180,9 +1180,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         thisView.setScopeNode(d);
       }
 
-      // change noded TODO remove apRouter from base graph view
+      // change noded TODO remove appRouter from base graph view
       if (thisView.appRouter) {
-        thisView.appRouter.changeUrlParams({focus: d.id});
+        thisView.appRouter.changeUrlParams({focus: d.get("tag")});
       }
 
       // contract the graph from the deps and ols
@@ -1443,7 +1443,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      */
     setScopeNode: function (d) {
       var thisView = this;
-      thisView.setFocusNode(d);
+      thisView.setFocusNode(d, true);
       pvt.changeNodeClasses.call(thisView, thisView.scopeNode, d, pvt.consts.scopeCircleGClass);
       thisView.scopeNode = d;
       // delay info box so that animations finish TODO hardcoding
@@ -1465,11 +1465,13 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     /**
      * Set's the focus (highlighted) node on the graph
      */
-    setFocusNode: function (d) {
+    setFocusNode: function (d, triggerSFN) {
       var thisView = this;
       pvt.changeNodeClasses.call(thisView, thisView.focusNode, d, pvt.consts.focusCircleGClass);
       thisView.focusNode = d;
-      thisView.model.trigger("setFocusNode", d.id);
+      if (triggerSFN) {
+        thisView.model.trigger("setFocusNode", d.id);
+      }
     },
 
     /**
