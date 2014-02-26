@@ -1274,11 +1274,11 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      *
      * @return <string> the id of circleG
      */
-    getCircleGId: function  (nodeModelOrCid) {
-      if (nodeModelOrCid.cid !== undefined){
-        nodeModelOrCid = nodeModelOrCid.cid;
+    getCircleGId: function  (nodeModelOrId) {
+      if (nodeModelOrId.id !== undefined){
+        nodeModelOrId = nodeModelOrId.id;
       }
-      return pvt.consts.circleGIdPrefix + nodeModelOrCid;
+      return pvt.consts.circleGIdPrefix + nodeModelOrId;
     },
 
     /**
