@@ -1096,7 +1096,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           .classed(consts.linkWrapHoverClass, true)
           .classed(consts.depLinkWrapHoverClass, true);
         if (thisView.isEdgeVisible(ol)){
-          d3.select("#" + consts.circleGIdPrefix + ol.get("target").cid)
+          d3.select("#" + consts.circleGIdPrefix + ol.get("target").id)
             .select("circle")
             .classed(consts.olCircleClass, true);
         }
@@ -1105,7 +1105,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         d3.select("#" + consts.edgeGIdPrefix + dep.cid)
           .classed(consts.linkWrapHoverClass, true);
         if (thisView.isEdgeVisible(dep)){
-          d3.select("#" + consts.circleGIdPrefix + dep.get("source").cid)
+          d3.select("#" + consts.circleGIdPrefix + dep.get("source").id)
             .select("circle")
             .classed(consts.depCircleClass, true);
         }
@@ -1142,7 +1142,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         d3.select("#" + consts.edgeGIdPrefix + ol.cid)
           .classed(consts.linkWrapHoverClass, false)
           .classed(consts.depLinkWrapHoverClass, false);
-        d3.select("#" + consts.circleGIdPrefix + ol.get("target").cid)
+        d3.select("#" + consts.circleGIdPrefix + ol.get("target").id)
           .select("circle")
           .classed(consts.olCircleClass, false);
 
@@ -1150,7 +1150,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d.get("dependencies").each(function (dep) {
         d3.select("#" + consts.edgeGIdPrefix + dep.cid)
           .classed(consts.linkWrapHoverClass, false);
-        d3.select("#" + consts.circleGIdPrefix + dep.get("source").cid)
+        d3.select("#" + consts.circleGIdPrefix + dep.get("source").id)
           .select("circle")
           .classed(consts.depCircleClass, false);
       });

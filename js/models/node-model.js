@@ -72,12 +72,16 @@ define(["backbone", "underscore", "../collections/edge-collection"], function(Ba
       /**
        * Collection fields
        */
-      collFields: ["dependencies", "outlinks"],
+      collFields: function () {
+        return ["dependencies", "outlinks"];
+      },
 
       /**
        * Non-collection fields, nominally referred to as text fields
        */
-      txtFields: ["id", "title"],
+      txtFields: function () {
+          return  ["id", "title"];
+      },
 
       /**
        * Returns all outlinks that are not transitive edges
