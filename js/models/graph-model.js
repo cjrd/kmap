@@ -5,25 +5,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
   pvt.alwaysTrue = function(){return true;};
 
-  pvt.setEdgeId = function (edge) {
-    var src,
-        tar,
-        needsServerId;
-
-    if (edge.set) {
-      // edge is a backbone model
-      src = edge.get("source");
-      tar = edge.get("target");
-      edge.set("id", String(src.id) + String(tar.id));
-      edge.set("needsServerId",!src.hasServerId || !tar.hasServerId);
-    } else {
-      src = edge.source;
-      tar = edge.target;
-      edge.id = String(src.id) + String(tar.id);
-      edge.needsServerId = !src.hasServerId || !tar.hasServerId;
-    }
-  };
-
   return Backbone.Model.extend({
     defaults: function(){
       return {
@@ -233,6 +214,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      */
     addEdge: function(edge) {
       var thisGraph = this,
+          isNewEdge = false,
           // check if source/target are ids and switch to nodes if necessary
           source =  typeof edge.source === "string"  ? this.getNode(edge.source) : edge.source,
           target = typeof edge.target === "string" ? this.getNode(edge.target) :  edge.target;
@@ -248,9 +230,9 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
         console.log("warning: loop edge detected and not added to graph, node: " + edge.source.id);
         return;
       }
-
       if (edge.id === undefined) {
-        pvt.setEdgeId(edge);
+        thisGraph.setEdgeId(edge);
+        isNewEdge = true;
       }
 
       // check if this edge is transitive
@@ -273,7 +255,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
           }
         });
       }
-      thisGraph.postAddEdge(mEdge);
+      thisGraph.postAddEdge(mEdge, isNewEdge);
     },
 
     /**
@@ -281,8 +263,13 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      *
      * @param {edge object} edge: the edge just added to the model
      */
-    postAddEdge: function (edge) {
+    postAddEdge: function (edge) {},
 
+    /**
+     * set the edge id
+     */
+    setEdgeId: function (edge) {
+        return Math.random().toString(36).substring(3);
     },
 
     /**
@@ -308,30 +295,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       }
       thisGraph.getNodes().add(node);
 
-      if (node.url && (isNewNode || node.get("syncWithServer"))) {
-        node.hasServerId = false;
-
-        // TODO HARDCODED URL
-        $.get("/graphs/idchecker/", {id: node.id, type: "concept" })
-          .success(function (resp) {
-            node.set("id", resp.id);
-            node.set("tag", resp.id);
-            node.hasServerId = true;
-            // set edge ids that were waiting for the server
-            thisGraph.getEdges().filter(function (edge) {
-              return edge.get("needsServerId");
-            }).forEach(pvt.setEdgeId);
-          })
-          .fail(function (resp){
-            // failure
-            console.error("unable to verify new resource id -- TODO inform user -- msg: "
-                          + resp.responseText);
-          });
-      } else {
-        node.hasServerId = true;
-      }
-
-      thisGraph.postAddNode(node);
+      thisGraph.postAddNode(node, isNewNode);
     },
 
     /**
@@ -339,9 +303,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      *
      * @param {node object} node: the node just added to the model
      */
-    postAddNode: function (node) {
-
-    },
+    postAddNode: function (node, isNewNode) {},
 
     /**
      * Removes an edge from the graph: removes the edge from the edge collection
