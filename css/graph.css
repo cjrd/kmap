@@ -113,7 +113,7 @@ svg{
 
 .concept-g circle{
     stroke: #333333;
-    stroke-width: 2px;
+    stroke-width: 1.5px;
     fill: #F6FBFF; /* light shade of alice blue see http://encycolorpedia.com/f6fbff for color scheme */
 }
 

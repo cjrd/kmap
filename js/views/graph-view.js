@@ -54,6 +54,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     zoomInClass: "graph-zoom-in-button",
     summaryElId: "graph-summary-el",
     hoveredClass: "hovered",
+    titleTextClass: "title-text-class",
     pathWrapClass: "link-wrapper",
     pathClass: "link",
     expandCrossClass: "exp-cross",
@@ -984,6 +985,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var dy = resArr.length > reduceThresh ? '10' : '15';
 
       var el = gEl.append("text")
+            .classed(pvt.consts.titleTextClass, true)
             .attr("text-anchor","middle")
             .attr("dy", "-" + (resArr.length-1)*dy*6.5/15);
 
