@@ -269,7 +269,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      * set the edge id
      */
     setEdgeId: function (edge) {
-        return Math.random().toString(36).substring(3);
+        return Math.random().toString(36).substring(10);
     },
 
     /**
@@ -289,7 +289,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
         var nodeId = node.id;
         if (nodeId === undefined || nodeId === null || nodeId === "") {
           isNewNode = true;
-          node.id =  Math.random().toString(36).substring(3);
+          node.id =  Math.random().toString(36).substring(10);
         }
         node = new thisGraph.nodeModel(node, {parse: true});
       }
