@@ -502,16 +502,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // change/set focus node
       thisView.listenTo(thisView.model, "setFocusNode", function (id) {
-        if (thisView.state.isFocusing) {
+        if (thisView.state.isFocusing || (thisView.focusNode && thisView.focusNode.id == id)) {
           return;
         }
         thisView.state.isFocusing = true;
         var inpNode = thisView.model.getNode(id);
         if (thisView.hasScope() && thisView.isNodeVisible(inpNode)){
-          // if node is visible and in scope mode, simply simulate a click event on the node
+          // if node is visible and in scope mode, simply simulate a click event on the node if it's not already scoped
           var el = document.getElementById(thisView.getCircleGId(inpNode));
-          thisView.simulate(el, "mousedown");
-          thisView.simulate(el, "mouseup");
+              thisView.simulate(el, "mousedown");
+              thisView.simulate(el, "mouseup");
         } else if (!thisView.focusNode ||  thisView.focusNode.id !== inpNode.id){
           // order matters - must set focus _after_ rendering
           thisView.centerForNode(inpNode);
@@ -681,6 +681,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         })
         .on("mouseout", function(d) {
           thisView.pathMouseOut.call(thisView, d, this);
+        })
+        .on("mouseup", function (d) {
+          thisView.pathMouseUp.call(thisView, d, this);
         });
 
 
@@ -899,14 +902,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       else thisView.state.isTransitioning = true;
 
       if (!thisView.isNodeVisible(d)){
-        if (thisView.scopeNode) thisView.nullScopeNode();
+        if (thisView.scopeNode) {
+          thisView.nullScopeNode();
+        }
         thisView.model.expandGraph();
         thisView.optimizeGraphPlacement(true, false, d.id);
       }
 
       // TODO remove hard coded scale and duration
-      var hasScope = thisView.hasScope();
-      var translateTrans = thisView.d3SvgG.transition()
+      var hasScope = thisView.hasScope(),
+          translateTrans = thisView.d3SvgG.transition()
             .duration(500)
             .attr("transform", function () {
               // TODO move this function to pvt
@@ -1159,12 +1164,21 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       thisView.postCircleMouseOut(d, nodeEl);
     },
 
+    pathMouseUp: function (d, domEl) {
+      var thisView = this;
+      thisView.prePathMouseUp();
+      thisView.state.pathMouseUp = true;
+      thisView.postPathMouseUp();
+    },
+
+
     /**
      * Mouse up on the concept circle
      */
     circleMouseUp: function (d, domEl) {
       var thisView = this;
       thisView.preCircleMouseUp();
+      thisView.state.circleMouseUp = true;
 
       if (thisView.state.justDragged || thisView.state.iconClicked) {
         return false;
@@ -1237,11 +1251,19 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      * Handle mouseup event on svg
      */
     svgMouseUp: function () {
-      var thisView = this;
+      var thisView = this,
+          state = thisView.state;
       thisView.preSvgMouseUp();
-      // reset the states here
-      thisView.state.justDragged = false;
-      thisView.state.iconClicked = false;
+
+      if (thisView.scopeNode && !state.circleMouseUp && !state.pathMouseUp && !state.justDragged && !state.iconClicked) {
+        thisView.handleShowAllClick();
+      }
+
+      // reset the states
+      state.justDragged = false;
+      state.iconClicked = false;
+      state.circleMouseUp = false;
+      state.pathMouseUp = false;
       thisView.postSvgMouseUp();
     },
 
@@ -1424,7 +1446,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     showNodeSummary: function (d) {
       var thisView = this;
       thisView.$summaryEl.html("<h1>" + d.get("title") + "</h1>\n" + (d.get("summary") || "-no summary-"));
-      thisView.$summaryEl.show();//fadeIn(pvt.consts.summaryTransTime);
+      thisView.$summaryEl.show();
     },
 
     hideSummary: function (d) {
@@ -1642,9 +1664,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       }
     },
-    windowKeyUp: function(evt) {
-
-    },
+    windowKeyUp: function(evt) {},
     handleNewPaths: function() {},
     handleNewCircles: function () {},
     firstRender: function (){},
@@ -1654,6 +1674,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     postCircleMouseOver: function () {},
     preCircleMouseUp: function () {},
     postCircleMouseUp: function () {},
+    prePathMouseUp: function () {},
+    postPathMouseUp: function () {},
     postSvgMouseUp: function () {},
     preSvgMouseUp: function () {}
 
