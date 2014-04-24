@@ -46,6 +46,7 @@ The minimal expected data format is as follows (only ids are required):
 
 ## Graph View settings
 You can change the following settings by passing an object into the GraphView constructor with the appropriate settings field specified, e.g. from the `demo/demojs/khan.js` demo: `graphView = new KMap.GraphView(settings);`
+
         settings.useWisps {boolean}: show wisp edges instead of long edges (default: true)
         settings.minWispLenPx {number > 0}: the minimum length to make an edge a wisp edge (default: 285)
         settings.includeShortestDep {boolean}: always show the shortest inlink for each node, regardless of its length (default: false)
