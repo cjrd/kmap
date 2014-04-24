@@ -118,7 +118,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
         thisGraph.addEdge.call(thisGraph, edge);
       });
 
-      return this;
+      return thisGraph;
     },
 
     /**
@@ -269,7 +269,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      * set the edge id
      */
     setEdgeId: function (edge) {
-        return Math.random().toString(36).substring(10);
+        edge.id =  Math.random().toString(36).substring(10);
     },
 
     /**

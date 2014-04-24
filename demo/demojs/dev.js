@@ -1,11 +1,16 @@
 // development testing script - not used for library
 
+require.config({
+  baseUrl: "../../js"
+});
+
+
 /*global require, KMap, $*/
 require(["main"], function(KMap){
   // create the model so we can pass it into the views
   var graphModel = new KMap.GraphModel(),
 
-  graphView = new KMap.GraphView({model: graphModel, useWisps: true, includeShortestDep: true,  graphDirection: "TB", showTransEdgesWisps: true}),
+  graphView = new KMap.GraphView({model: graphModel, useWisps: true, includeShortestDep: false,  graphDirection: "TB", showTransEdgesWisps: true}),
       graphListView = new KMap.GraphListView({model: graphModel});
 
   var handleDataFun = function (data) {
@@ -37,10 +42,7 @@ require(["main"], function(KMap){
 
   };
 
-  // fetch some graph data (multiple fetches since demo_kmap is not stored in repo yet
-  $.getJSON("/data/demo_kmap.json", handleDataFun)
-    .fail(function () {
-      $.getJSON("/data/metacademy_demo.json", handleDataFun);
-    });
+  // fetch some graph data
+  $.getJSON("../data/metacademy_demo.json", handleDataFun);
 
 });

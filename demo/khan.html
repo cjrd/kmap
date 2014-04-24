@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <link rel="stylesheet" href="css/demo.css"/>
-    <link rel="stylesheet" href="css/graph.css"/>
-    <link rel="stylesheet" href="css/list.css"/>
+  <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <link rel="stylesheet" href="../css/demo.css"/>
+    <link rel="stylesheet" href="../css/graph.css"/>
+    <link rel="stylesheet" href="../css/list.css"/>
     <link href='http://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>
   </head>
   <body>
@@ -11,11 +12,12 @@
     <div id="main-display-view">
 
       <div id="graph-view-wrapper">
+        loading... (check dev console for errors if this takes too long)
       </div>
 
     </div>
 
-    <!-- Underscore Templates -->
+    <!-- Underscore Template -->
     <script type="text/template" id="concept-list-template">
 
       <div id="concept-list-show-button" class="small-vp-button">
@@ -33,20 +35,20 @@
           </div>
 
           <div id="concept-list-hide-button" style="font-size: 1.4em; padding: 0  0.1em 0.2em 0.1em;">
-            «
+            &laquo;
           </div>
-
         </div>
       </div>
 
+
       <div id="concept-list-wrapper">
-        <ol id="concept-list">
-        </ol>
-      </div>
+          <ol id="concept-list">
+          </ol>
+        </div>
     </script>
 
     <!-- js -->
-    <script data-main="js/dev.js" src="js/lib/require-min.js"></script>
+    <script data-main="demojs/khan.js" src="../js/lib/require-min.js"></script>
 
   </body>
 </html>
