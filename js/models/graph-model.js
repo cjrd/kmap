@@ -133,17 +133,24 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      * @param endNode: the end node
      * @param checkFun: an optional function that dermines whether an edge
      * is valid (e.g. an "is visible" function --defaults to a tautological function)
+     * @param visitedNodeIds: optional set of visited nodeids to avoid infinite recursion when cycles are present
      * @return <boolean> - true if there is a directed path from stNode to endNode (follows outlinks from stNode)
      */
-    isPathBetweenNodes: function (stNode, endNode, checkFun) {
+    isPathBetweenNodes: function (stNode, endNode, checkFun, visitedNodeIds) {
       var thisGraph = this,
           outlinks = stNode.get("outlinks");
+      visitedNodeIds = visitedNodeIds || {};
       checkFun = checkFun || pvt.alwaysTrue;
       // DFS recursive search
       return outlinks.length > 0
         && outlinks.any(function(ol){
           var olTar = ol.get("target");
-          return checkFun(ol) && (olTar.id === endNode.id || thisGraph.isPathBetweenNodes(olTar, endNode, checkFun));
+          if (visitedNodeIds.hasOwnProperty(olTar.id)) {
+            return false;
+          } else {
+            visitedNodeIds[olTar.id] = true;
+            return checkFun(ol) && (olTar.id === endNode.id || thisGraph.isPathBetweenNodes(olTar, endNode, checkFun, visitedNodeIds));
+          }
         });
     },
 
@@ -239,7 +246,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       // (will be transitive if there is already a path from the edge source to the edge target)
       edge.isTransitive = thisGraph.isPathBetweenNodes(edge.source, edge.target);
 
-      //
       var edges = thisGraph.getEdges();
       edges.add(edge, {parse: true});
       var mEdge = edges.get(edge.id);
