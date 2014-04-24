@@ -1,13 +1,20 @@
 /**
+ * This view defines the graph view and is a mesh of d3 and backbone
+ *
+ * Developer notes:
  * This base graph view expects the following from all subviews:
- * - copy pvt using getBasePvt method -- make sure to copy pvt.consts if you define your own consts, e.g. pvt.consts = _.extend(globalConsts, myconsts)
- * -el should be a container element that will render the svg
+ * - copy pvt using getBasePvt method
+ * -- make sure to copy pvt.consts if you define your own consts,
+ *    e.g. pvt.consts = _.extend(globalConsts, myconsts)
+ *
+ * - el should be a container element that will render the svg
  *
  * NOTE: You should not (!) override the render or initialize method
  *        -- use prerender and postrender and handleNewPaths and handleNewCircles
  *           and preinitialize and postinitialize
  *
- * After first render (even in prerender on first render) the following elements are available
+ * After first render (even in prerender on first render)
+ *   the following elements are available
  * - this.d3Svg
  * - this.gPaths: block g element for the paths
  *    (paths when dealing with svg and edges when dealing with data model)
@@ -25,11 +32,9 @@
 define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d3, _, dagre, $) {
 
   /**********************
-   * private class vars *
+   *    private vars    *
    **********************/
-
   var pvt = {};
-
   pvt.consts = {
     exPlusWidth: 5, // expand plus sign width in pixels
     minusRectW: 11,
@@ -84,6 +89,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     summaryTransTime: 200
   };
 
+  // "Plus" element when expand/contract is enabled
   pvt.consts.plusPts = "0,0 " +
     pvt.consts.exPlusWidth + ",0 " +
     pvt.consts.exPlusWidth + "," + pvt.consts.exPlusWidth + " " +
@@ -98,11 +104,13 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     "0," + pvt.consts.exPlusWidth + " " +
     "0,0";
 
+  // reusable dragline when creating new edges
   pvt.d3Line = d3.svg.line()
     .x(function(d) {return d.x === undefined ? d.get("x") : d.x;})
     .y(function(d) {return d.y === undefined ? d.get("y") : d.y;})
     .interpolate('bundle')
     .tension(0.85);
+
 
   /*******************
    * private methods *
@@ -123,6 +131,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     var d3Svg = d3.select(thisView.el).append("svg:svg");
     thisView.d3Svg = d3Svg;
 
+    // define the arrow edges
     var defs = d3Svg.append('svg:defs');
     defs.append('svg:marker')
       .attr('id', 'end-arrow')
@@ -134,9 +143,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       .append('svg:path')
       .attr('d', 'M0,-5L10,0L0,5');
 
+    // main g element for the given svg
     thisView.d3SvgG = thisView.d3Svg.append("g")
       .classed(consts.graphClass, true);
-
     var d3SvgG = thisView.d3SvgG;
 
     // svg nodes and edges
@@ -161,14 +170,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     $zoomInButton.addClass(consts.zoomInClass);
     $zoomInButton.html("+");
 
+    // build the el
     $zoomBoxDiv.append($zoomInButton);
     $zoomBoxDiv.append($zoomOutButton);
     thisView.$el.append($zoomBoxDiv);
   };
 
+
   /**
-   * center-zoom the svgG element
-   * type {"in", "out"}
+   * Center the svgG element and then zoom
+   * type: {"in", "out"}
    */
   pvt.centerZoomSvgG = function (type) {
     var thisView = this,
@@ -200,8 +211,13 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     thisView.hideSummary();
   };
 
+
   /**
    * Change the scope node classes for the corresponding g elements
+   *
+   * prevD: previously classed node element data (class will be removed)
+   * nextD: to-be classed node element data (class will be added)
+   * classVal: the class to assign for the node class
    */
   pvt.changeNodeClasses = function (prevD, nextD, classVal) {
     var thisView = this,
@@ -216,10 +232,12 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     }
   };
 
+
   /**
    * Smooth path animation interpolation
+   *
+   *  from http://bl.ocks.org/mbostock/3916621
    */
-  // from http://bl.ocks.org/mbostock/3916621
   pvt.pathTween = function (d1, precision) {
     return function() {
       var path0 = this,
@@ -245,13 +263,17 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     };
   };
 
+
   /**
    * Get id of node element (d3, dom, or model)
+   *
+   * node: d3, dom, or model node element
    */
   pvt.getIdOfNodeType = function(node) {
     var nodeFun = node.attr || node.getAttribute || node.get;
     return nodeFun.call(node, "id");
   };
+
 
   /**
    * Helper function to obtain id of summary txt div for a given node in the exporation view
@@ -260,12 +282,14 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     return pvt.getIdOfNodeType.call(this, node) + pvt.consts.summaryDivSuffix;
   };
 
+
   /**
    * Helper function to obtain id of wrapper div of summary txt for a given node in the exporation view
    */
   pvt.getSummaryIdForDivWrap = function(node) {
     return pvt.getIdOfNodeType.call(this, node) + pvt.consts.summaryWrapDivSuffix;
   };
+
 
   /**
    * Get summary box placement (top left) given node placement
@@ -281,8 +305,11 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     };
   };
 
+
   /**
    * Add expand/contract icon to the nodes
+   *
+   * TODO this logic could probably be refactored a bit
    */
   pvt.addECIcon = function(d, d3el, isDeps){
     var thisView = this,
@@ -351,6 +378,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     }
   };
 
+
   /**
    * Hide long paths and show wisps
    */
@@ -406,6 +434,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       });
   };
 
+
   /**
    * return <function> isEdgeVisible function with correct "this"
    * and transitivity not taken into account
@@ -416,6 +445,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       return thisView.isEdgeVisible.call(thisView,  e, false);
     };
   };
+
 
   /**
    * Returns the path of the starting wisp
@@ -437,6 +467,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
   };
 
+
+  /**
+   * the the edge path element from the given data (d) input
+   */
   pvt.getEdgePath = function(d){
     var pathPts = d.get("middlePts") ? [].concat(d.get("middlePts")) : [];
 
@@ -450,7 +484,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     return pvt.d3Line(pathPts);
   };
 
-  // computes intersection points for two circular nodes (simple geometry)
+
+  /**
+   * computes intersection points for two circular nodes (simple geometry)
+   */
   pvt.computeEndPt = function (src, tgt){
     var srcX = src.x === undefined ? src.get("x") : src.x,
         srcY =  src.y === undefined ? src.get("y") : src.y,
@@ -465,6 +502,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     return {source: {x: srcX + offX, y: srcY + offY}, target: {x: tgtX - offX, y: tgtY - offY}};
   };
 
+
+  /***************
+   Return the public backbone view
+  ***************/
   return Backbone.View.extend({
 
     id: pvt.consts.viewId,
@@ -530,27 +571,33 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       });
 
       // set instance variables -- can overwrite in subclasses
-      thisView.pathTransTime = 500;
       // transition time for moving paths when optimizing graph
-      thisView.newPathTransDelay = 350;
+      thisView.pathTransTime = 500;
+
       // transition delay for new paths (lets nodes appear first)
-      thisView.newPathTransTime =  1000;
+      thisView.newPathTransDelay = 350;
+
       // fade in time of new paths
-      thisView.rmPathTransTime =  500;
+      thisView.newPathTransTime =  1000;
+
       // fade out time of removed paths
-      thisView.rmCircleTransTime =  500;
+      thisView.rmPathTransTime =  500;
+
       // fade out time of removed circles
-      thisView.moveCircleTransTime =  500;
+      thisView.rmCircleTransTime =  500;
+
       // move transition time for circles
-      thisView.newCircleTransDelay =  200;
+      thisView.moveCircleTransTime =  500;
+
       // trans delay for new circles
-      thisView.newCircleTransTime =  800;
+      thisView.newCircleTransDelay =  200;
+
       // trans fade-in time for new circles
+      thisView.newCircleTransTime =  800;
 
       d3.select("#optimize").on("click", function(){thisView.optimizeGraphPlacement.call(thisView, true);});
 
       // TODO move to appropriate subclass since appRouter isn't used here
-      // TODO use a settings object to store settings
       var settings = {};
         thisView.appRouter = inp && inp.appRouter;
         settings.includeShortestDep = inp && inp.includeShortestDep;
@@ -561,6 +608,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         settings.graphDirection =  (inp && inp.graphDirection) === undefined ? pvt.consts.defaultGraphDirection : inp.graphDirection;
       settings.showTransEdgesWisps = (inp && inp.showTransEdgesWisps) === undefined ? true : inp.showTransEdgesWisps;
       thisView.settings = settings;
+
       // setup d3 window listeners
       d3.select(window).on("keydown",  function(){
         thisView.windowKeyDown.call(thisView);
@@ -636,7 +684,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       }
       else{
         gPaths.each(function(d){
-          // FIXME: remove code repetition with above conditional
+          // FIXME: DRY with above conditional
           var d3el = d3.select(this),
               edgePath = pvt.getEdgePath(d);
           d3el.selectAll("path")
@@ -802,7 +850,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       }
     },
 
-
     /**
      * called for each node after it has been rendered (all animations have been applied)
      */
@@ -934,10 +981,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
     /**
      * Add expand/contract icon to graph
-     * @param d: the data element
-     * @param d3el: d3 selection for the data element
-     * @param thisView: current view reference
-     * @param isDeps: set to true if working with dependencies (otherwise working with outlinks)
+     * d: the data element
+     * d3el: d3 selection for the data element
+     * thisView: current view reference
+     * isDeps: set to true if working with dependencies (otherwise working with outlinks)
      */
     addExpContIcons: function(d, d3this, thisView){
       if (!thisView.isNodeVisible(d)) return;
@@ -1108,6 +1155,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
             .classed(consts.olCircleClass, true);
         }
       });
+
+      // set the appropriate classes
       d.get("dependencies").each(function (dep) {
         d3.select("#" + consts.edgeGIdPrefix + dep.cid)
           .classed(consts.linkWrapHoverClass, true);
@@ -1152,7 +1201,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         d3.select("#" + consts.circleGIdPrefix + ol.get("target").id)
           .select("circle")
           .classed(consts.olCircleClass, false);
-
       });
       d.get("dependencies").each(function (dep) {
         d3.select("#" + consts.edgeGIdPrefix + dep.cid)
@@ -1164,6 +1212,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       thisView.postCircleMouseOut(d, nodeEl);
     },
 
+    /**
+     * Mouseup on path elements
+     */
     pathMouseUp: function (d, domEl) {
       var thisView = this;
       thisView.prePathMouseUp();
@@ -1278,7 +1329,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     /**
      * Return the g element of the path from the given model
      *
-     * @param eModel: the edge model
+     * eModel: the edge model
      */
     getD3PathGFromModel: function(eModel){
       return this.d3Svg.select("#" + this.getPathGId(eModel));
@@ -1287,7 +1338,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     /**
      * Return the g element for the circle from the given model
      *
-     * @param nModel: the node model
+     * nModel: the node model
      */
     getD3CircleGFromModel: function(nModel){
       return this.d3Svg.select("#" + this.getCircleGId(nModel));
@@ -1368,7 +1419,6 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
     /**
      * Determines if the edge should be clipped
-     *
      */
     doClipEdge: function(edge) {
       var thisView = this,
@@ -1678,7 +1728,5 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     postPathMouseUp: function () {},
     postSvgMouseUp: function () {},
     preSvgMouseUp: function () {}
-
   });
-
 });

@@ -28,7 +28,7 @@ require(["main"], function(KMap){
       graphModel.addJsonNodesToGraph(data);
       settings.includeShortestDep = true;
     }
-    settings.useWisps = true;
+    settings.useWisps = false;
     settings.showTransEdgesWisps = true;
     graphView = new KMap.GraphView(settings);
 
