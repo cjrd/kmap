@@ -9,9 +9,10 @@ require.config({
 require(["main"], function(KMap){
   // create the model so we can pass it into the views
   var graphModel = new KMap.GraphModel(),
+      settings = {model: graphModel, useWisps: false,  graphDirection: "TB", showTransEdgesWisps: true};
 
-  graphView = new KMap.GraphView({model: graphModel, useWisps: true, includeShortestDep: false,  graphDirection: "TB", showTransEdgesWisps: true}),
-      graphListView = new KMap.GraphListView({model: graphModel});
+      var graphView = new KMap.GraphView(settings),
+          graphListView = new KMap.GraphListView({model: graphModel});
 
   var handleDataFun = function (data) {
 
