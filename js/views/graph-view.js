@@ -601,6 +601,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var settings = {};
         thisView.appRouter = inp && inp.appRouter;
         settings.includeShortestDep = inp && inp.includeShortestDep;
+        // TODO change pvt.consts.edgeLenThresh to settings
+        pvt.consts.edgeLenThresh = (inp && inp.minWispLenPx) ? inp.minWispLenPx : pvt.consts.edgeLenThresh;
         settings.includeShortestOutlink = inp && inp.includeShortestOutlink;
         settings.useWisps = (inp && inp.useWisps) === undefined ? true : inp.useWisps;
         settings.showEdgeSummary = (inp && inp.showEdgeSummary) === undefined ? true : inp.showEdgeSummary;

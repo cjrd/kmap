@@ -23,13 +23,18 @@ require(["main"], function(KMap){
         // only add the subgraph to the graph
         graphModel.addJsonSubGraphToGraph(data, target);
         settings.includeShortestOutlink = true;
+        settings.minWispLenPx = 500;
     } else {
       // not targeted: add all the data to the graph model
       graphModel.addJsonNodesToGraph(data);
       settings.includeShortestDep = true;
+      settings.minWispLenPx = 300;
     }
-    settings.useWisps = false;
+
+    // set some basic settings
+    settings.useWisps = true;
     settings.showTransEdgesWisps = true;
+    settings.showEdgeSummary = false;
     graphView = new KMap.GraphView(settings);
 
     // set the graph placement (don't use if "x" and "y" are specified in the data)
