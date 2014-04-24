@@ -32,8 +32,7 @@ requirejs.config(  {
     "btouch": {
       deps: ["jquery", "underscore", "backbone"]
     }
-  },
-  urlArgs: "bust=" + (new Date()).getTime()
+  }
 });
 
 //main execution

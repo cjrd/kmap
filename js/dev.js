@@ -2,7 +2,7 @@
 
 /*global require, KMap, $*/
 require(["main"], function(KMap){
-  // create the model and pass it into the views
+  // create the model so we can pass it into the views
   var graphModel = new KMap.GraphModel(),
 
   graphView = new KMap.GraphView({model: graphModel, useWisps: true, includeShortestDep: true,  graphDirection: "TB", showTransEdgesWisps: true}),

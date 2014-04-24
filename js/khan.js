@@ -4,6 +4,7 @@
 require(["main"], function(KMap){
   // create the model and pass it into the views
   var graphModel = new KMap.GraphModel(),
+
       graphListView = new KMap.GraphListView({model: graphModel}),
       graphView,
       settings = {model: graphModel};
@@ -22,6 +23,8 @@ require(["main"], function(KMap){
       graphModel.addJsonNodesToGraph(data);
       settings.includeShortestDep = true;
     }
+    settings.useWisps = true;
+    settings.showTransEdgesWisps = true;
     graphView = new KMap.GraphView(settings);
 
     // set the graph placement (don't use if "x" and "y" are specified in the data)
