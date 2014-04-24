@@ -22,15 +22,10 @@ The knowledge map library is the core component for Metacademy's interactive kno
 1. See a simple demo at `http://localhost:8000/dev.html`
 
 
-## Data format
-
-Coming soon (send me an email if you need this right now)
-
 ## Data Format
 
-TODO fully document the data format
 
-The minimal expected data format is as follows (only id is required):
+The minimal expected data format is as follows (only ids are required):
 
         [node1, node2, ...]
 
@@ -47,6 +42,18 @@ The minimal expected data format is as follows (only id is required):
                 source: "source_id", // this is the only require attribute for deps
                 reason: "reason for dep"
         }
+
+
+## Graph View settings
+You can change the following settings by passing an object into the GraphView constructor with the appropriate settings field specified, e.g. from the `demo/demojs/khan.js` demo: `graphView = new KMap.GraphView(settings);`
+        settings.useWisps {boolean}: show wisp edges instead of long edges (default: true)
+        settings.minWispLenPx {number > 0}: the minimum length to make an edge a wisp edge (default: 285)
+        settings.includeShortestDep {boolean}: always show the shortest inlink for each node, regardless of its length (default: false)
+        settings.includeShortestOutlink {boolean}: always show the shortest outlink for each node, regardless of its length (default: false)
+        settings.showEdgeSummary {boolean}: show the edge summary field on hover (default: true)
+        settings.showNodeSummar {boolean}: show the node summary field on hover (default: true)
+        settings.graphDirection {"BT", "TB", "LR", "RL"}: direction of graph edges, e.g. TB = "top-to-bottom" (default: "TB")
+        settings.showTransEdgesWisps {boolean}: show transitive edges as wisps (default: true)
 
 
 ## Notes
