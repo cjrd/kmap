@@ -4,8 +4,12 @@ kmap
 Knowledge map visualization library (work in progress)
 
 
-## Demo
+## Demos
 The knowledge map library is the core component for Metacademy's interactive knowledge map, e.g. [metacademy graph demo](http://metacademy.org/graphs/concepts/bayesian_linear_regression#focus=bayesian_linear_regression&mode=explore)
+
+See the html and associated javascript files in [/demo](/demo)
+
+TODO upload live working versions of these demos
 
 ## Installation
 

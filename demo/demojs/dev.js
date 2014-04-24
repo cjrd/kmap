@@ -7,12 +7,12 @@ require.config({
 
 /*global require, KMap, $*/
 require(["main"], function(KMap){
-  // create the model so we can pass it into the views
+  // create the model/settings so we can pass it into the views
   var graphModel = new KMap.GraphModel(),
       settings = {model: graphModel, useWisps: false,  graphDirection: "TB", showTransEdgesWisps: true};
 
-      var graphView = new KMap.GraphView(settings),
-          graphListView = new KMap.GraphListView({model: graphModel});
+  var graphView = new KMap.GraphView(settings),
+      graphListView = new KMap.GraphListView({model: graphModel});
 
   var handleDataFun = function (data) {
 
