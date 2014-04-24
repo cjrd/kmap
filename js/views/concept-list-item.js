@@ -38,7 +38,7 @@ define(["backbone", "underscore"], function (Backbone, _) {
             thisView.model.trigger("toggleNodeScope", modelId);
           }
           // change url parameters if using a router
-          this.appRouter && this.appRouter.changeUrlParams({focus: this.model.id});
+          this.appRouter && this.appRouter.changeUrlParams({focus: thisView.model.get("tag")});
         }
       },
 

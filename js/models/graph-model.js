@@ -1,3 +1,4 @@
+
 /*global define */
 define(["jquery", "underscore", "backbone", "../collections/edge-collection", "../collections/node-collection", "../models/node-model", "../models/edge-model"], function($, _, Backbone, BaseEdgeCollection, BaseNodeCollection){
   var pvt = {};
@@ -5,7 +6,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
   pvt.alwaysTrue = function(){return true;};
 
   return Backbone.Model.extend({
-
     defaults: function(){
       return {
         leafs: [], // TODO perhaps this should be stored in the nodes
@@ -16,8 +16,8 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
     initialize: function(){
       var thisModel = this;
-      thisModel.edgeModel = thisModel.get("edges").model;
-      thisModel.nodeModel = thisModel.get("nodes").model;
+      thisModel.edgeModel = thisModel.edgeModel || thisModel.get("edges").model;
+      thisModel.nodeModel = thisModel.nodeModel || thisModel.get("nodes").model;
       thisModel.get("nodes").on("setFocusNode", function(id){
         thisModel.trigger("setFocusNode", id);
       });
@@ -27,7 +27,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
       thisModel.postinitialize();
     },
-
 
     // override in subclass
     postinitialize: function(){},
@@ -40,7 +39,12 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      */
     toJSON: function() {
       // returning nodes AND edges is redundant, since nodes contain dep info
-      return this.get("nodes").toJSON();
+      return {
+        id: this.get("id"),
+        title: this.get("title"),
+        concepts: this.get("nodes").toJSON(),
+        dependencies: this.get("edges").toJSON()
+      };
     },
 
     /**
@@ -92,7 +96,6 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      * @return {backbone model} this model altered by the jsonObj (allows chaining)
      */
     addJsonNodesToGraph: function(jsonNodeArr) {
-
       var thisGraph = this,
           tmpEdges = [];
 
@@ -207,12 +210,14 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      * outlinks/dependencies properties in the appropriate nodes
      *
      * @param {edge object} edge: the edge to be added to the model
+     * @param {object} extrasObj: an object with extra options that is passed through to postAddEdge
      */
     addEdge: function(edge) {
       var thisGraph = this,
-      // check if source/target are ids and switch to nodes if necessary
-      source =  edge.source instanceof thisGraph.nodeModel ? edge.source : this.getNode(edge.source),
-      target = edge.target instanceof thisGraph.nodeModel ? edge.target : this.getNode(edge.target);
+          isNewEdge = false,
+          // check if source/target are ids and switch to nodes if necessary
+          source =  typeof edge.source === "string"  ? this.getNode(edge.source) : edge.source,
+          target = typeof edge.target === "string" ? this.getNode(edge.target) :  edge.target;
 
       if (!source  || !target) {
         throw new Error("source or target was not given correctly for input or does not exist in graph: " + edge.source + " -> " + edge.target );
@@ -225,9 +230,9 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
         console.log("warning: loop edge detected and not added to graph, node: " + edge.source.id);
         return;
       }
-
       if (edge.id === undefined) {
-        edge.id = String(edge.source.id) + String(edge.target.id);
+        thisGraph.setEdgeId(edge);
+        isNewEdge = true;
       }
 
       // check if this edge is transitive
@@ -236,7 +241,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
       //
       var edges = thisGraph.getEdges();
-      edges.add(edge);
+      edges.add(edge, {parse: true});
       var mEdge = edges.get(edge.id);
       edge.source.get("outlinks").add(mEdge);
       edge.target.get("dependencies").add(mEdge);
@@ -250,20 +255,55 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
           }
         });
       }
+      thisGraph.postAddEdge(mEdge, isNewEdge);
+    },
+
+    /**
+     * postAddEdge: called at the end of the addEdge function
+     *
+     * @param {edge object} edge: the edge just added to the model
+     */
+    postAddEdge: function (edge) {},
+
+    /**
+     * set the edge id
+     */
+    setEdgeId: function (edge) {
+        return Math.random().toString(36).substring(10);
     },
 
     /**
      * Add a node to the graph
+     * Note:
+     * new nodes that should be synced with a server
+     * should not have an id specified and should have a defined "url"
+     * in the node backbone model or they should have the property
+     * "syncWithServer" set to a non-falsey value
      *
      * @param {node object} node: the node to be added to the model
      */
     addNode: function(node) {
-      var thisGraph = this;
-      if (!(node instanceof thisGraph.nodeModel )){
+      var thisGraph = this,
+          isNewNode = false;
+      if (!(node.set )){
+        var nodeId = node.id;
+        if (nodeId === undefined || nodeId === null || nodeId === "") {
+          isNewNode = true;
+          node.id =  Math.random().toString(36).substring(10);
+        }
         node = new thisGraph.nodeModel(node, {parse: true});
       }
-      this.get("nodes").add(node);
+      thisGraph.getNodes().add(node);
+
+      thisGraph.postAddNode(node, isNewNode);
     },
+
+    /**
+     * postAddNode: called at the end of the addNode function
+     *
+     * @param {node object} node: the node just added to the model
+     */
+    postAddNode: function (node, isNewNode) {},
 
     /**
      * Removes an edge from the graph: removes the edge from the edge collection

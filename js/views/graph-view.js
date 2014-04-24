@@ -54,6 +54,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     zoomInClass: "graph-zoom-in-button",
     summaryElId: "graph-summary-el",
     hoveredClass: "hovered",
+    titleTextClass: "title-text-class",
     pathWrapClass: "link-wrapper",
     pathClass: "link",
     expandCrossClass: "exp-cross",
@@ -206,11 +207,11 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     var thisView = this,
         gId;
     if (prevD) {
-      gId = thisView.getCircleGId(prevD.id);
+      gId = thisView.getCircleGId(prevD);
       d3.select("#" + gId).classed(classVal, false);
     }
     if (nextD) {
-      gId = thisView.getCircleGId(nextD.id);
+      gId = thisView.getCircleGId(nextD);
       d3.select("#" + gId).classed(classVal, true);
     }
   };
@@ -501,16 +502,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // change/set focus node
       thisView.listenTo(thisView.model, "setFocusNode", function (id) {
-        if (thisView.state.isFocusing) {
+        if (thisView.state.isFocusing || (thisView.focusNode && thisView.focusNode.id == id)) {
           return;
         }
         thisView.state.isFocusing = true;
         var inpNode = thisView.model.getNode(id);
         if (thisView.hasScope() && thisView.isNodeVisible(inpNode)){
-          // if node is visible and in scope mode, simply simulate a click event on the node
+          // if node is visible and in scope mode, simply simulate a click event on the node if it's not already scoped
           var el = document.getElementById(thisView.getCircleGId(inpNode));
-          thisView.simulate(el, "mousedown");
-          thisView.simulate(el, "mouseup");
+              thisView.simulate(el, "mousedown");
+              thisView.simulate(el, "mouseup");
         } else if (!thisView.focusNode ||  thisView.focusNode.id !== inpNode.id){
           // order matters - must set focus _after_ rendering
           thisView.centerForNode(inpNode);
@@ -605,7 +606,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
               .filter(function(mdl){
                 return thisView.isEdgeVisible(mdl);
               }), function(d){
-                return d.id;
+                return d.cid;
               });
 
       var gPaths = thisView.gPaths;
@@ -680,6 +681,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         })
         .on("mouseout", function(d) {
           thisView.pathMouseOut.call(thisView, d, this);
+        })
+        .on("mouseup", function (d) {
+          thisView.pathMouseUp.call(thisView, d, this);
         });
 
 
@@ -700,7 +704,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       thisView.gCircles = thisView.gCircles
         .data(thisView.model.getNodes().filter(function(mdl){return thisView.isNodeVisible(mdl);}),
               function(d){
-                return d.id;
+                return d.cid;
               });
 
       thisView.gCircles.exit()
@@ -898,14 +902,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       else thisView.state.isTransitioning = true;
 
       if (!thisView.isNodeVisible(d)){
-        if (thisView.scopeNode) thisView.nullScopeNode();
+        if (thisView.scopeNode) {
+          thisView.nullScopeNode();
+        }
         thisView.model.expandGraph();
         thisView.optimizeGraphPlacement(true, false, d.id);
       }
 
       // TODO remove hard coded scale and duration
-      var hasScope = thisView.hasScope();
-      var translateTrans = thisView.d3SvgG.transition()
+      var hasScope = thisView.hasScope(),
+          translateTrans = thisView.d3SvgG.transition()
             .duration(500)
             .attr("transform", function () {
               // TODO move this function to pvt
@@ -984,6 +990,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var dy = resArr.length > reduceThresh ? '10' : '15';
 
       var el = gEl.append("text")
+            .classed(pvt.consts.titleTextClass, true)
             .attr("text-anchor","middle")
             .attr("dy", "-" + (resArr.length-1)*dy*6.5/15);
 
@@ -1002,13 +1009,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       var thisView = this,
           consts = pvt.consts;
 
-      thisView.dzoom = d3.behavior.zoom();
+      thisView.dzoom = d3.behavior.zoom()
+                         .on("zoom", redraw)
+                         .on("zoomstart", startZoom)
+                         .on("zoomend", endZoom);
       var dzoom = thisView.dzoom;
       // make graph zoomable/translatable
       var vis = thisView.d3Svg
             .attr("pointer-events", "all")
             .attr("viewBox", null)
-            .call(dzoom.on("zoom", redraw))
+            .call(dzoom)
             .select("g");
 
       // set the zoom scale
@@ -1017,6 +1027,15 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           nodeLoc,
           d3event,
           currentScale;
+
+      function startZoom() {
+        // add move cursor
+        d3.select("body").style("cursor", "move");
+      }
+      function endZoom() {
+        // change cursor back to normal
+        d3.select("body").style("cursor", "auto");
+      }
 
       // helper function to redraw svg graph with correct coordinates
       function redraw() {
@@ -1080,7 +1099,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // show/emphasize connecting edges
       d.get("outlinks").each(function (ol) {
-        d3.select("#" + consts.edgeGIdPrefix + ol.id)
+        d3.select("#" + consts.edgeGIdPrefix + ol.cid)
           .classed(consts.linkWrapHoverClass, true)
           .classed(consts.depLinkWrapHoverClass, true);
         if (thisView.isEdgeVisible(ol)){
@@ -1090,7 +1109,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         }
       });
       d.get("dependencies").each(function (dep) {
-        d3.select("#" + consts.edgeGIdPrefix + dep.id)
+        d3.select("#" + consts.edgeGIdPrefix + dep.cid)
           .classed(consts.linkWrapHoverClass, true);
         if (thisView.isEdgeVisible(dep)){
           d3.select("#" + consts.circleGIdPrefix + dep.get("source").id)
@@ -1127,7 +1146,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       d3node.classed(hoveredClass, false); // FIXME align class options once summary display is figured out
       // show/emphasize connecting edges
       d.get("outlinks").each(function (ol) {
-        d3.select("#" + consts.edgeGIdPrefix + ol.id)
+        d3.select("#" + consts.edgeGIdPrefix + ol.cid)
           .classed(consts.linkWrapHoverClass, false)
           .classed(consts.depLinkWrapHoverClass, false);
         d3.select("#" + consts.circleGIdPrefix + ol.get("target").id)
@@ -1136,7 +1155,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       });
       d.get("dependencies").each(function (dep) {
-        d3.select("#" + consts.edgeGIdPrefix + dep.id)
+        d3.select("#" + consts.edgeGIdPrefix + dep.cid)
           .classed(consts.linkWrapHoverClass, false);
         d3.select("#" + consts.circleGIdPrefix + dep.get("source").id)
           .select("circle")
@@ -1145,12 +1164,21 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
       thisView.postCircleMouseOut(d, nodeEl);
     },
 
+    pathMouseUp: function (d, domEl) {
+      var thisView = this;
+      thisView.prePathMouseUp();
+      thisView.state.pathMouseUp = true;
+      thisView.postPathMouseUp();
+    },
+
+
     /**
      * Mouse up on the concept circle
      */
     circleMouseUp: function (d, domEl) {
       var thisView = this;
       thisView.preCircleMouseUp();
+      thisView.state.circleMouseUp = true;
 
       if (thisView.state.justDragged || thisView.state.iconClicked) {
         return false;
@@ -1168,9 +1196,9 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         thisView.setScopeNode(d);
       }
 
-      // change noded TODO remove apRouter from base graph view
+      // change noded TODO remove appRouter from base graph view
       if (thisView.appRouter) {
-        thisView.appRouter.changeUrlParams({focus: d.id});
+        thisView.appRouter.changeUrlParams({focus: d.get("tag")});
       }
 
       // contract the graph from the deps and ols
@@ -1223,11 +1251,19 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      * Handle mouseup event on svg
      */
     svgMouseUp: function () {
-      var thisView = this;
+      var thisView = this,
+          state = thisView.state;
       thisView.preSvgMouseUp();
-      // reset the states here
-      thisView.state.justDragged = false;
-      thisView.state.iconClicked = false;
+
+      if (thisView.scopeNode && !state.circleMouseUp && !state.pathMouseUp && !state.justDragged && !state.iconClicked) {
+        thisView.handleShowAllClick();
+      }
+
+      // reset the states
+      state.justDragged = false;
+      state.iconClicked = false;
+      state.circleMouseUp = false;
+      state.pathMouseUp = false;
       thisView.postSvgMouseUp();
     },
 
@@ -1270,12 +1306,12 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     },
 
     /**
-     * Return the edgeG id for a a nodeModel
+     * Return the edgeG id for a nodeModel
      *
      * @return <string> the id of edgeG
      */
     getPathGId: function  (edgeModel) {
-      return pvt.consts.edgeGIdPrefix + edgeModel.id;
+      return pvt.consts.edgeGIdPrefix + edgeModel.cid;
     },
 
     /**
@@ -1410,7 +1446,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     showNodeSummary: function (d) {
       var thisView = this;
       thisView.$summaryEl.html("<h1>" + d.get("title") + "</h1>\n" + (d.get("summary") || "-no summary-"));
-      thisView.$summaryEl.show();//fadeIn(pvt.consts.summaryTransTime);
+      thisView.$summaryEl.show();
     },
 
     hideSummary: function (d) {
@@ -1431,7 +1467,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
      */
     setScopeNode: function (d) {
       var thisView = this;
-      thisView.setFocusNode(d);
+      thisView.setFocusNode(d, true);
       pvt.changeNodeClasses.call(thisView, thisView.scopeNode, d, pvt.consts.scopeCircleGClass);
       thisView.scopeNode = d;
       // delay info box so that animations finish TODO hardcoding
@@ -1453,11 +1489,13 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     /**
      * Set's the focus (highlighted) node on the graph
      */
-    setFocusNode: function (d) {
+    setFocusNode: function (d, triggerSFN) {
       var thisView = this;
       pvt.changeNodeClasses.call(thisView, thisView.focusNode, d, pvt.consts.focusCircleGClass);
       thisView.focusNode = d;
-      thisView.model.trigger("setFocusNode", d.id);
+      if (triggerSFN) {
+        thisView.model.trigger("setFocusNode", d.id);
+      }
     },
 
     /**
@@ -1626,9 +1664,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       }
     },
-    windowKeyUp: function(evt) {
-
-    },
+    windowKeyUp: function(evt) {},
     handleNewPaths: function() {},
     handleNewCircles: function () {},
     firstRender: function (){},
@@ -1638,6 +1674,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
     postCircleMouseOver: function () {},
     preCircleMouseUp: function () {},
     postCircleMouseUp: function () {},
+    prePathMouseUp: function () {},
+    postPathMouseUp: function () {},
     postSvgMouseUp: function () {},
     preSvgMouseUp: function () {}
 
