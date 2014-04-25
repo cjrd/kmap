@@ -9,7 +9,9 @@ The knowledge map library is the core component for Metacademy's interactive kno
 
 See the html and associated javascript files in [/demo](/demo)
 
-TODO upload live working versions of these demos
+[Demo: Khan Academy Content](http://obphio.us/kmap/demo/khan.html#implicit-differentiation)
+
+[Demo: Metacademy Content](http://obphio.us/kmap/demo/dev.html)
 
 ## Installation
 
