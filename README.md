@@ -25,7 +25,7 @@ See the html and associated javascript files in [/demo](/demo)
 
 1. Run the tests by navigating to `http://localhost:8000/tests.html`
 
-1. See a simple demo at `http://localhost:8000/dev.html`
+1. See a simple demo at `http://localhost:8000/demo/dev.html`
 
 
 ## Data Format
