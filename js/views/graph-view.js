@@ -245,6 +245,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
           n0 = path0.getTotalLength(),
           n1 = (path1.setAttribute("d", d1), path1).getTotalLength();
 
+      // firefox hack FIXME
+      n0 = isNaN(n0) ? 250 : n0;
+      n1 = isNaN(n1) ? 250 : n1;
+
       // Uniform sampling of distance based on specified precision.
       var distances = [0], i = 0, dt = precision / Math.max(n0, n1);
       while ((i += dt) < 1) distances.push(i);
@@ -385,9 +389,16 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
   pvt.handleLongPaths = function (d, d3this) {
     var consts = pvt.consts,
         stPathD = pvt.getPathWispD(d3this.select("path").node(), true),
-        endPathD = pvt.getPathWispD(d3this.select("path").node(), false),
+        endPathD,
         wispsG,
         longPaths;
+
+    // Firefox problems
+    try {
+      endPathD = pvt.getPathWispD(d3this.select("path").node(), false);
+    } catch(error) {
+      return;
+    }
 
     // hide long paths
     longPaths = d3this.selectAll("path");
