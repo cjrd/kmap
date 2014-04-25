@@ -468,6 +468,10 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         endDist = isStart ? consts.wispLen : svgPath.getTotalLength(),
         i = isStart ? 0 :  endDist - consts.wispLen + consts.nodeRadius; // TODO subtract node radius
 
+    if (endDist > 50000) {
+      throw Error("Firefox isn't very good with svg");
+    }
+
     distances.push(i);
     while ((i += dt) < endDist) distances.push(i);
     var points = distances.map(function(dist){
