@@ -1,7 +1,7 @@
 // demo: khan academy data
 
 require.config({
-  baseUrl: "../../js"
+  baseUrl: "../js"
 });
 
 

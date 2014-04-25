@@ -1,7 +1,7 @@
 // development testing script - not used for library
 
 require.config({
-  baseUrl: "../../js"
+  baseUrl: "../js"
 });
 
 
