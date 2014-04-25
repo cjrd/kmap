@@ -5,13 +5,23 @@ Knowledge map visualization library (work in progress)
 
 
 ## Demos
-The knowledge map library is the core component for Metacademy's interactive knowledge map, e.g. [metacademy graph demo](http://metacademy.org/graphs/concepts/bayesian_linear_regression#focus=bayesian_linear_regression&mode=explore)
+The knowledge map library is the core component for Metacademy's interactive knowledge map, e.g. [metacademy graph demo](http://metacademy.org/graphs/concepts/deep_belief_networks#focus=deep_belief_networks&mode=explore)
+<p align="center">
+<a href="http://metacademy.org/graphs/concepts/deep_belief_networks#focus=deep_belief_networks&mode=explore" alt="demo kmap">
+<img src="http://obphio.us/media/images/meta-graph-dbn.png" alt="Metacademy Logo" height="350px"/>
+</a>
+</p>
+
 
 See the html and associated javascript files in [/demo](/demo)
 
 [Demo: Khan Academy Content](http://obphio.us/kmap/demo/khan.html#implicit-differentiation)
 
 [Demo: Metacademy Content](http://obphio.us/kmap/demo/dev.html)
+
+
+
+
 
 ## Installation
 
