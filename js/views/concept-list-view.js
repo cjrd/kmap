@@ -82,8 +82,8 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
         $list.attr("id", olId);
 
         // add the list elements with the correct properties
-        var i = -1, len = nodeOrdering.length;
-        for(; ++i < len;){
+        var i;
+        for(i = 0; i < nodeOrdering.length; i++){
           curNode = nodes.get(nodeOrdering[i]);
           nliview = new thisView.ListItem({model: curNode, appRouter: appRouter});
           nliview.parentView = thisView;
