@@ -14,7 +14,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       };
     },
 
-    initialize: function(){
+    initialize: function(inp){
       var thisModel = this;
       thisModel.edgeModel = thisModel.edgeModel || thisModel.get("edges").model;
       thisModel.nodeModel = thisModel.nodeModel || thisModel.get("nodes").model;
@@ -24,6 +24,9 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       thisModel.get("nodes").on("toggleNodeScope", function(id){
         thisModel.trigger("toggleNodeScope", id);
       });
+      var settings = {};
+      settings.allowCycles = inp && inp.allowCycles;
+      thisModel.settings = settings;
 
       thisModel.postinitialize();
     },
@@ -134,6 +137,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
      * @param checkFun: an optional function that dermines whether an edge
      * is valid (e.g. an "is visible" function --defaults to a tautological function)
      * @param visitedNodeIds: optional set of visited nodeids to avoid infinite recursion when cycles are present
+     * @param allowCycles: allows cycles if set to true (default false)
      * @return <boolean> - true if there is a directed path from stNode to endNode (follows outlinks from stNode)
      */
     isPathBetweenNodes: function (stNode, endNode, checkFun, visitedNodeIds) {
@@ -146,7 +150,7 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
         && outlinks.any(function(ol){
           var olTar = ol.get("target");
           if (visitedNodeIds.hasOwnProperty(olTar.id)) {
-            return false;
+              return false;
           } else {
             visitedNodeIds[olTar.id] = true;
             return checkFun(ol) && (olTar.id === endNode.id || thisGraph.isPathBetweenNodes(olTar, endNode, checkFun, visitedNodeIds));
@@ -244,7 +248,12 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
 
       // check if this edge is transitive
       // (will be transitive if there is already a path from the edge source to the edge target)
-      edge.isTransitive = thisGraph.isPathBetweenNodes(edge.source, edge.target);
+        edge.isTransitive = thisGraph.isPathBetweenNodes(edge.source, edge.target);
+        edge.causesCycle = thisGraph.isPathBetweenNodes(edge.target, edge.source);
+      if (edge.causesCycle && !thisGraph.allowCycles) {
+        alert("could not add edge: " + (edge.source.get("title") || edge.source.id) + " -> " + (edge.target.get("title") || edge.target.id) + "\nedge induces a cycle");
+        return;
+      }
 
       var edges = thisGraph.getEdges();
       edges.add(edge, {parse: true});

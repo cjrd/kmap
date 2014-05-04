@@ -73,5 +73,10 @@ You can change the following settings by passing an object into the GraphView co
         settings.showTransEdgesWisps {boolean}: show transitive edges as wisps (default: true)
 
 
+## Graph Model settings
+You can change the following settings by passing an object into the GraphModel constructor with the appropriate settings field specified, e.g. from the `demo/demojs/khan.js` demo: `var graphModel = new KMap.GraphModel({allowCycles: true});`
+
+        settings.addCycles {boolean}: allows cycles in the graph if set to true (default: false)
+
 ## Notes
 The knowledge map visualization library is a work in progress -- it was extracted from the [metacademy application codebase](https://github.com/metacademy/metacademy-application). I am currently working on making this code easy to use by itself while still maintaining compatability with metacademy. Please contact me (coloradoNospam at berkeley dot edu, remove the no spam part) if you want to use this code for your own project but are having trouble figuring out the code.

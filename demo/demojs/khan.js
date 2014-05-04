@@ -8,8 +8,7 @@ require.config({
 /*global require, KMap, $*/
 require(["main"], function(KMap){
   // create the model and pass it into the views
-  var graphModel = new KMap.GraphModel(),
-
+  var graphModel = new KMap.GraphModel({allowCycles: true}),
       graphListView = new KMap.GraphListView({model: graphModel}),
       graphView,
       settings = {model: graphModel};
