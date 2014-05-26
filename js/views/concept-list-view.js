@@ -162,13 +162,13 @@ define(["backbone", "underscore", "jquery", "../views/concept-list-item"], funct
         }
 
         thisView.model.getNodes().each(function (node) {
-          if (!inpVal.length || node.get("title").toLowerCase().match(inpVal)) {
+         // TODO notGoalRelevant is not needed for kmapjs, only metacademy
+          if (!node.get("notGoalRelevant") && (!inpVal.length || node.get("title").toLowerCase().match(inpVal))) {
             $("#" + pvt.consts.titleIdPrefix + node.id).show();
           } else {
             $("#" + pvt.consts.titleIdPrefix + node.id ).hide();
           }
         });
-
       },
 
       /**
