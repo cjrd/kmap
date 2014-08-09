@@ -342,7 +342,16 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
           transEdge.set("isTransitive", false);
         }
       });
+
+      thisGraph.postRemoveEdge(edge);
     },
+
+    /**
+     *
+     *
+     * @param {edge object} edge: the edge object that was removed
+     */
+    postRemoveEdge: function(node) {},
 
     /**
      * Removes the node from the graph and all edges that were in its dependencies/outlinks attributes
@@ -356,7 +365,16 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       node.get("dependencies").pluck("id").forEach(function(edgeId){ thisGraph.removeEdge(edgeId);});
       node.get("outlinks").pluck("id").forEach(function(edgeId){ thisGraph.removeEdge(edgeId);});
       nodes.remove(node);
+      thisGraph.postRemoveNode(node);
     },
+
+    /**
+     *
+     *
+     * @param {node id or node object} node: the node object that was removed
+     */
+    postRemoveNode: function(node) {},
+
 
     /**
      * Compute the learning view ordering (topological sort)
