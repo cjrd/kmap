@@ -555,6 +555,8 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
 
       // TODO find a better way to communicate between views w/out involving urls
       thisView.listenTo(thisView.model, "render", thisView.render);
+      thisView.listenTo(thisView.model, "destroyNode", thisView.render);
+      thisView.listenTo(thisView.model, "destroyEdge", thisView.render);
 
       // change/set focus node
       thisView.listenTo(thisView.model, "setFocusNode", function (id) {
@@ -1707,7 +1709,7 @@ define(["backbone", "d3", "underscore", "dagre", "jquery"], function(Backbone, d
         // plus sign: zoom in
         thisView.zoomInGraph();
         break;
-      case 189 :
+      case 189:
       case 173:
         // minus sign: zoom out
         thisView.zoomOutGraph();

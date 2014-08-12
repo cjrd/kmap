@@ -24,6 +24,13 @@ define(["jquery", "underscore", "backbone", "../collections/edge-collection", ".
       thisModel.get("nodes").on("toggleNodeScope", function(id){
         thisModel.trigger("toggleNodeScope", id);
       });
+      thisModel.get("nodes").on("destroy", function () {
+        thisModel.trigger("destroyNode");
+      });
+      thisModel.get("edges").on("destroy", function () {
+        thisModel.trigger("destroyEdge");
+      });
+
       var settings = {};
       settings.allowCycles = inp && inp.allowCycles;
       thisModel.settings = settings;
